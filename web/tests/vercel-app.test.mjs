@@ -97,6 +97,8 @@ test("defines the rebuildable health intelligence layer", async () => {
   assert.match(buildScript, /await import\("\.\/run-data-migrations\.mjs"\)/);
   assert.match(featureBuilder, /sourceSelection', 'greatest_specific_stage_coverage'/);
   assert.match(featureBuilder, /leakageBoundary', 'strictly_before_feature_date'/);
+  assert.match(featureBuilder, /partitionDateRange\(minimumDate, maximumDate, chunkDays\)/);
+  assert.match(featureBuilder, /KAIRO_BACKFILL_CHUNK_DAYS/);
   assert.match(factorTrainer, /expanding-window walk-forward/);
   assert.match(factorTrainer, /baselineMeanAbsoluteError/);
   assert.match(packageJson, /"features:rebuild"/);

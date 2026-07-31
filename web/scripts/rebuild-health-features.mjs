@@ -8,6 +8,10 @@ const argumentsByName = parseArguments(process.argv.slice(2));
 const ownerId = argumentsByName.owner ?? process.env.KAIRO_OWNER_ID ?? "primary";
 const timeZone = argumentsByName.timezone ?? process.env.KAIRO_TIME_ZONE ?? "Asia/Kolkata";
 const featureVersion = "health-v1";
+const chunkDays = validatePositiveInteger(
+  argumentsByName["chunk-days"] ?? process.env.KAIRO_BACKFILL_CHUNK_DAYS ?? "180",
+  "chunk-days",
+);
 const sql = neon(databaseUrl);
 
 const bounds = await sql.query(
@@ -55,13 +59,32 @@ try {
     [ownerId, featureVersion, minimumDate, maximumDate],
   );
 
-  await rebuildNumericFeatures({ ownerId, timeZone, minimumDate, maximumDate, featureVersion });
-  await rebuildSleepFeatures({ ownerId, timeZone, minimumDate, maximumDate, featureVersion });
-  await rebuildStandFeatures({ ownerId, timeZone, minimumDate, maximumDate, featureVersion });
-  await rebuildWorkoutFeatures({ ownerId, timeZone, minimumDate, maximumDate, featureVersion });
-  await rebuildCategoryFeatures({ ownerId, timeZone, minimumDate, maximumDate, featureVersion });
-  await rebuildRollingFeatures({ ownerId, minimumDate, maximumDate, featureVersion });
-  await rebuildProfiles({ ownerId, minimumDate, maximumDate, featureVersion });
+  const chunks = partitionDateRange(minimumDate, maximumDate, chunkDays);
+  console.log(
+    `Rebuilding ${featureVersion} in ${chunks.length.toLocaleString("en-IN")} date chunks of at most ${chunkDays} days.`,
+  );
+  for (const [index, chunk] of chunks.entries()) {
+    console.log(
+      `Starting feature chunk ${index + 1}/${chunks.length}: ${chunk.from} through ${chunk.through}.`,
+    );
+    const parameters = {
+      ownerId,
+      timeZone,
+      minimumDate: chunk.from,
+      maximumDate: chunk.through,
+      featureVersion,
+    };
+    await rebuildNumericFeatures(parameters);
+    await rebuildSleepFeatures(parameters);
+    await rebuildStandFeatures(parameters);
+    await rebuildWorkoutFeatures(parameters);
+    await rebuildCategoryFeatures(parameters);
+    await rebuildRollingFeatures(parameters);
+    await rebuildProfiles(parameters);
+    console.log(
+      `Completed feature chunk ${index + 1}/${chunks.length}: ${chunk.from} through ${chunk.through}.`,
+    );
+  }
 
   const countRows = await sql.query(
     `SELECT COUNT(*)::int AS value
@@ -765,13 +788,44 @@ function parseArguments(values) {
     const name = argument.slice(2);
     const value = values[index + 1];
     if (!value || value.startsWith("--")) throw new Error(`${argument} requires a value`);
-    if (!["owner", "timezone", "from", "through"].includes(name)) {
+    if (!["owner", "timezone", "from", "through", "chunk-days"].includes(name)) {
       throw new Error(`Unknown argument: ${argument}`);
     }
     result[name] = value;
     index += 1;
   }
   return result;
+}
+
+function partitionDateRange(from, through, maximumDays) {
+  const chunks = [];
+  const finalDate = parseUtcDate(through);
+  let cursor = parseUtcDate(from);
+  while (cursor <= finalDate) {
+    const chunkEnd = new Date(cursor);
+    chunkEnd.setUTCDate(chunkEnd.getUTCDate() + maximumDays - 1);
+    if (chunkEnd > finalDate) chunkEnd.setTime(finalDate.getTime());
+    chunks.push({ from: formatUtcDate(cursor), through: formatUtcDate(chunkEnd) });
+    cursor = new Date(chunkEnd);
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
+  }
+  return chunks;
+}
+
+function parseUtcDate(value) {
+  return new Date(`${value}T00:00:00.000Z`);
+}
+
+function formatUtcDate(value) {
+  return value.toISOString().slice(0, 10);
+}
+
+function validatePositiveInteger(value, name) {
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 1) {
+    throw new Error(`--${name} must be a positive integer`);
+  }
+  return parsed;
 }
 
 function validateDate(value, name) {
