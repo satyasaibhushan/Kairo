@@ -1,0 +1,467 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		1C88B839F81CD3100EE5A549 /* HealthDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E12E3CF93588B24BF2FB93A /* HealthDashboardView.swift */; };
+		80E815DE1BE32404D6CB88D6 /* HealthMetricCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACDE57048C8245B1A1197D3B /* HealthMetricCard.swift */; };
+		C2C815BDB948D159AB9DA1CB /* KairoApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 901935EAFB4892CB533512DB /* KairoApp.swift */; };
+		C7C91D33BCEF7FC0533929B7 /* HealthSnapshotLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6869566B12249DE571329616 /* HealthSnapshotLoader.swift */; };
+		E01C6D72CE05CC09C186B5B2 /* HealthMetric.swift in Sources */ = {isa = PBXBuildFile; fileRef = D25551EAEEE9C59D702AA2AB /* HealthMetric.swift */; };
+		E3A1246017D22F24573FB19D /* HealthMetricTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F75645D50B764772B8690E99 /* HealthMetricTests.swift */; };
+		E4A99F509931BD47EB635232 /* HealthStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2AF3419115C0444B10D94E3 /* HealthStore.swift */; };
+		F85D1473F1F266603B3492FC /* HealthAuthorizationState.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A95CB1DC0496DC1DCB609D /* HealthAuthorizationState.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		96B029CEEAD8084CDF5638FA /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 8BAE484607F13FF20567ED85 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 92631A9C59B27ED72FFA931F;
+			remoteInfo = Kairo;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		05D3086F2B92089538F04568 /* Kairo.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Kairo.entitlements; sourceTree = "<group>"; };
+		0C9DF9F5AFB0847C50D35628 /* KairoTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = KairoTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		1E12E3CF93588B24BF2FB93A /* HealthDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthDashboardView.swift; sourceTree = "<group>"; };
+		6869566B12249DE571329616 /* HealthSnapshotLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthSnapshotLoader.swift; sourceTree = "<group>"; };
+		7177D61B1C241DEDE6D70FA9 /* Kairo.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Kairo.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		901935EAFB4892CB533512DB /* KairoApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KairoApp.swift; sourceTree = "<group>"; };
+		9B0E973CA87290FE8916A74E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		ACDE57048C8245B1A1197D3B /* HealthMetricCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthMetricCard.swift; sourceTree = "<group>"; };
+		C2AF3419115C0444B10D94E3 /* HealthStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthStore.swift; sourceTree = "<group>"; };
+		D25551EAEEE9C59D702AA2AB /* HealthMetric.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthMetric.swift; sourceTree = "<group>"; };
+		F0A95CB1DC0496DC1DCB609D /* HealthAuthorizationState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthAuthorizationState.swift; sourceTree = "<group>"; };
+		F75645D50B764772B8690E99 /* HealthMetricTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthMetricTests.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		27ED01708C11CAE8E5054446 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				7177D61B1C241DEDE6D70FA9 /* Kairo.app */,
+				0C9DF9F5AFB0847C50D35628 /* KairoTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		2A83DC25995487247E633639 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				1E12E3CF93588B24BF2FB93A /* HealthDashboardView.swift */,
+				ACDE57048C8245B1A1197D3B /* HealthMetricCard.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		49072573E7D3D60782E01735 = {
+			isa = PBXGroup;
+			children = (
+				D0F146B3EAB1D915C7174F6E /* Kairo */,
+				875AB50FE67B5B964688A190 /* KairoTests */,
+				27ED01708C11CAE8E5054446 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		670FCA3913DF2368C6F893C0 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				9B0E973CA87290FE8916A74E /* Info.plist */,
+				05D3086F2B92089538F04568 /* Kairo.entitlements */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		875AB50FE67B5B964688A190 /* KairoTests */ = {
+			isa = PBXGroup;
+			children = (
+				F75645D50B764772B8690E99 /* HealthMetricTests.swift */,
+			);
+			path = KairoTests;
+			sourceTree = "<group>";
+		};
+		B84679A34C0A9E44E2DE904F /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				F0A95CB1DC0496DC1DCB609D /* HealthAuthorizationState.swift */,
+				D25551EAEEE9C59D702AA2AB /* HealthMetric.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		D0F146B3EAB1D915C7174F6E /* Kairo */ = {
+			isa = PBXGroup;
+			children = (
+				E630847E307C323A2FA3FBA3 /* App */,
+				D3E8C1708F36790D2EA3EEF0 /* HealthKit */,
+				B84679A34C0A9E44E2DE904F /* Models */,
+				670FCA3913DF2368C6F893C0 /* Resources */,
+				2A83DC25995487247E633639 /* Views */,
+			);
+			path = Kairo;
+			sourceTree = "<group>";
+		};
+		D3E8C1708F36790D2EA3EEF0 /* HealthKit */ = {
+			isa = PBXGroup;
+			children = (
+				6869566B12249DE571329616 /* HealthSnapshotLoader.swift */,
+				C2AF3419115C0444B10D94E3 /* HealthStore.swift */,
+			);
+			path = HealthKit;
+			sourceTree = "<group>";
+		};
+		E630847E307C323A2FA3FBA3 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				901935EAFB4892CB533512DB /* KairoApp.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		92631A9C59B27ED72FFA931F /* Kairo */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = BEB7E67CF690A59DA4FD43B9 /* Build configuration list for PBXNativeTarget "Kairo" */;
+			buildPhases = (
+				33F0450028C1FA3C9D71EE43 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Kairo;
+			packageProductDependencies = (
+			);
+			productName = Kairo;
+			productReference = 7177D61B1C241DEDE6D70FA9 /* Kairo.app */;
+			productType = "com.apple.product-type.application";
+		};
+		AD7F0BA87190E437BE83FBEE /* KairoTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 5B595245816406F78D12B591 /* Build configuration list for PBXNativeTarget "KairoTests" */;
+			buildPhases = (
+				1E5B9B1E5ABD235D2F00562B /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				BC5850232477D2DCB9454ABD /* PBXTargetDependency */,
+			);
+			name = KairoTests;
+			packageProductDependencies = (
+			);
+			productName = KairoTests;
+			productReference = 0C9DF9F5AFB0847C50D35628 /* KairoTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		8BAE484607F13FF20567ED85 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					92631A9C59B27ED72FFA931F = {
+						ProvisioningStyle = Automatic;
+					};
+					AD7F0BA87190E437BE83FBEE = {
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = AC1ED10F3BC8AC0020A66B51 /* Build configuration list for PBXProject "Kairo" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 49072573E7D3D60782E01735;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 27ED01708C11CAE8E5054446 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				92631A9C59B27ED72FFA931F /* Kairo */,
+				AD7F0BA87190E437BE83FBEE /* KairoTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		1E5B9B1E5ABD235D2F00562B /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E3A1246017D22F24573FB19D /* HealthMetricTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		33F0450028C1FA3C9D71EE43 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F85D1473F1F266603B3492FC /* HealthAuthorizationState.swift in Sources */,
+				1C88B839F81CD3100EE5A549 /* HealthDashboardView.swift in Sources */,
+				E01C6D72CE05CC09C186B5B2 /* HealthMetric.swift in Sources */,
+				80E815DE1BE32404D6CB88D6 /* HealthMetricCard.swift in Sources */,
+				C7C91D33BCEF7FC0533929B7 /* HealthSnapshotLoader.swift in Sources */,
+				E4A99F509931BD47EB635232 /* HealthStore.swift in Sources */,
+				C2C815BDB948D159AB9DA1CB /* KairoApp.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		BC5850232477D2DCB9454ABD /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 92631A9C59B27ED72FFA931F /* Kairo */;
+			targetProxy = 96B029CEEAD8084CDF5638FA /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		3548C9BCF5A6F747F10CEAF1 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Kairo/Resources/Kairo.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				INFOPLIST_FILE = Kairo/Resources/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.satyasaibhushan.kairo;
+				PRODUCT_NAME = Kairo;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		677DF6F5BC04D51E17D8AD05 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_ASSET_PATHS = "\"Kairo/Preview Content\"";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				MARKETING_VERSION = 0.1.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		6A7AF3502E6EA5786E1BE349 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Kairo/Resources/Kairo.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				INFOPLIST_FILE = Kairo/Resources/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.satyasaibhushan.kairo;
+				PRODUCT_NAME = Kairo;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		9FA697EDD5F8E355B78A3B52 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.satyasaibhushan.kairo.tests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Kairo.app/Kairo";
+			};
+			name = Debug;
+		};
+		ACFF1A784390319836B9D6A0 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.satyasaibhushan.kairo.tests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Kairo.app/Kairo";
+			};
+			name = Release;
+		};
+		BB5B9E4EE2CEA9744B2EDCCF /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_ASSET_PATHS = "\"Kairo/Preview Content\"";
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				MARKETING_VERSION = 0.1.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		5B595245816406F78D12B591 /* Build configuration list for PBXNativeTarget "KairoTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				9FA697EDD5F8E355B78A3B52 /* Debug */,
+				ACFF1A784390319836B9D6A0 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		AC1ED10F3BC8AC0020A66B51 /* Build configuration list for PBXProject "Kairo" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				BB5B9E4EE2CEA9744B2EDCCF /* Debug */,
+				677DF6F5BC04D51E17D8AD05 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		BEB7E67CF690A59DA4FD43B9 /* Build configuration list for PBXNativeTarget "Kairo" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				3548C9BCF5A6F747F10CEAF1 /* Debug */,
+				6A7AF3502E6EA5786E1BE349 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 8BAE484607F13FF20567ED85 /* Project object */;
+}

@@ -1,0 +1,59 @@
+name: Kairo
+
+options:
+  bundleIdPrefix: com.satyasaibhushan
+  createIntermediateGroups: true
+  deploymentTarget:
+    iOS: "18.0"
+
+settings:
+  base:
+    CODE_SIGN_STYLE: Automatic
+    CURRENT_PROJECT_VERSION: 1
+    DEVELOPMENT_ASSET_PATHS: "\"Kairo/Preview Content\""
+    GENERATE_INFOPLIST_FILE: false
+    MARKETING_VERSION: 0.1.0
+    SWIFT_VERSION: 6.0
+
+targets:
+  Kairo:
+    type: application
+    platform: iOS
+    sources:
+      - path: Kairo
+        excludes:
+          - "Preview Content"
+    resources:
+      - path: "Kairo/Preview Content"
+    info:
+      path: Kairo/Resources/Info.plist
+    entitlements:
+      path: Kairo/Resources/Kairo.entitlements
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.satyasaibhushan.kairo
+        PRODUCT_NAME: Kairo
+        TARGETED_DEVICE_FAMILY: "1"
+
+  KairoTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: KairoTests
+    dependencies:
+      - target: Kairo
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.satyasaibhushan.kairo.tests
+
+schemes:
+  Kairo:
+    build:
+      targets:
+        Kairo: all
+        KairoTests:
+          - test
+    test:
+      gatherCoverageData: true
+      targets:
+        - KairoTests
