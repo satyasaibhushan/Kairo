@@ -1,14 +1,25 @@
+import HealthKit
 import XCTest
 @testable import Kairo
 
 final class HealthMetricTests: XCTestCase {
-    func testHealthCatalogCoversTheCompleteStandardSDKSurface() {
+    func testHealthCatalogRetainsSignalWithoutRawDenseTelemetry() throws {
         XCTAssertEqual(HealthDataCatalog.declaredTypeCount, 205)
         XCTAssertGreaterThanOrEqual(HealthDataCatalog.availableTypeCount, 200)
+        XCTAssertEqual(HealthDataCatalog.retainedTypeCount, 172)
         XCTAssertEqual(
             HealthDataCatalog.sampleTypes.count,
-            HealthDataCatalog.availableTypeCount - 7
+            HealthDataCatalog.rawSampleTypes.count
+                + HealthDataCatalog.summarizedQuantityTypes.count
         )
+        XCTAssertLessThan(HealthDataCatalog.retainedTypeCount, 197)
+
+        let weight = try XCTUnwrap(HKObjectType.quantityType(forIdentifier: .bodyMass))
+        let heartRate = try XCTUnwrap(HKObjectType.quantityType(forIdentifier: .heartRate))
+        let bodyMassIndex = try XCTUnwrap(HKObjectType.quantityType(forIdentifier: .bodyMassIndex))
+        XCTAssertEqual(HealthDataCatalog.retentionStrategy(for: weight), .raw)
+        XCTAssertEqual(HealthDataCatalog.retentionStrategy(for: heartRate), .dailySummary)
+        XCTAssertEqual(HealthDataCatalog.retentionStrategy(for: bodyMassIndex), .discard)
     }
 
     func testEveryMetricHasAReadableTitleAndSymbol() {
@@ -67,6 +78,20 @@ final class HealthMetricTests: XCTestCase {
             try queue.enqueue([makeChange(sampleID: UUID(), operation: .upsert)])
         )
         XCTAssertEqual(queue.count, 1)
+    }
+
+    func testProtectedQueueCanBeResetForARetentionPolicyChange() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let fileURL = directory.appendingPathComponent("queue.json")
+        let queue = try ProtectedHealthQueue(fileURL: fileURL, capacity: 5)
+        try queue.enqueue([makeChange(sampleID: UUID(), operation: .upsert)])
+
+        try queue.reset()
+
+        XCTAssertEqual(queue.count, 0)
+        XCTAssertEqual(try ProtectedHealthQueue(fileURL: fileURL, capacity: 5).count, 0)
     }
 
     func testPairingCodeRequiresHTTPSAndDecodesCredentials() throws {

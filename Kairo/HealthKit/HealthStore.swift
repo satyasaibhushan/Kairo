@@ -26,6 +26,18 @@ final class HealthStore: ObservableObject {
     init() {
         isSyncConfigured = (try? syncConfigurationStore.load()) != nil
         syncStatus = isSyncConfigured ? .ready : .notConfigured
+
+        let currentCatalog = HealthDataCatalog.sampleTypes.map(\.identifier)
+        if let progress = try? backfillProgressStore.load(),
+           progress.typeIdentifiers != currentCatalog {
+            // The previous 197-stream import cannot safely resume under the
+            // compact retention policy. Keep pairing, but restart collection.
+            try? HealthAnchorStore().reset()
+            try? HealthAnchorStore.historical().reset()
+            try? backfillProgressStore.reset()
+            try? ProtectedHealthQueue().reset()
+        }
+
         if let progress = try? backfillProgressStore.load() {
             backfillStatus = progress.isComplete ? .completed(progress) : .paused(progress)
         }

@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 @preconcurrency import HealthKit
 
@@ -49,6 +50,7 @@ struct HealthChange: Codable, Identifiable, Equatable {
 enum HealthPipelineError: LocalizedError {
     case queueFull(limit: Int)
     case missingAnchor
+    case missingStatistics
     case localStorageUnavailable
 
     var errorDescription: String? {
@@ -57,6 +59,8 @@ enum HealthPipelineError: LocalizedError {
             "Local health queue reached its safe limit of \(limit) changes. Connect an upload destination before collecting more."
         case .missingAnchor:
             "HealthKit did not return an incremental query anchor."
+        case .missingStatistics:
+            "HealthKit did not return daily statistics."
         case .localStorageUnavailable:
             "Local protected storage could not be opened."
         }
@@ -114,6 +118,12 @@ final class ProtectedHealthQueue {
             ($0.startDate ?? .distantPast, $0.id) < ($1.startDate ?? .distantPast, $1.id)
         }
         try persist()
+    }
+
+    func reset() throws {
+        changes = []
+        guard FileManager.default.fileExists(atPath: fileURL.path) else { return }
+        try FileManager.default.removeItem(at: fileURL)
     }
 
     private func persist() throws {
@@ -247,30 +257,50 @@ final class HealthIncrementalCollector {
     func collect(
         sampleTypes: [HKSampleType] = HealthDataCatalog.sampleTypes
     ) async -> HealthCollectionStatus {
-        let units = await preferredUnits(for: sampleTypes.compactMap { $0 as? HKQuantityType })
+        let rawQuantityTypes = sampleTypes.compactMap { type -> HKQuantityType? in
+            guard HealthDataCatalog.retentionStrategy(for: type) == .raw else { return nil }
+            return type as? HKQuantityType
+        }
+        let units = await preferredUnits(for: rawQuantityTypes)
         var scanned = 0
         var failures = 0
 
         for type in sampleTypes {
             do {
-                let existingAnchor = try anchors.anchor(for: type.identifier)
-                let predicate = existingAnchor == nil
-                    ? HKQuery.predicateForSamples(
-                        withStart: Date().addingTimeInterval(-initialLookback),
-                        end: nil,
-                        options: .strictStartDate
-                    )
-                    : nil
-                let page = try await query(type: type, predicate: predicate, anchor: existingAnchor)
-                let changes = page.samples.map {
-                    normalize($0, preferredUnit: ($0.sampleType as? HKQuantityType).flatMap { units[$0] })
-                } + page.deletions.map {
-                    HealthChange.deletion($0, typeIdentifier: type.identifier)
-                }
+                switch HealthDataCatalog.retentionStrategy(for: type) {
+                case .raw:
+                    let existingAnchor = try anchors.anchor(for: type.identifier)
+                    let predicate = existingAnchor == nil
+                        ? HKQuery.predicateForSamples(
+                            withStart: Date().addingTimeInterval(-initialLookback),
+                            end: nil,
+                            options: .strictStartDate
+                        )
+                        : nil
+                    let page = try await query(type: type, predicate: predicate, anchor: existingAnchor)
+                    let changes = page.samples.map {
+                        normalize($0, preferredUnit: ($0.sampleType as? HKQuantityType).flatMap { units[$0] })
+                    } + page.deletions.map {
+                        HealthChange.deletion($0, typeIdentifier: type.identifier)
+                    }
 
-                // The anchor advances only after its changes are protected on disk.
-                try queue.enqueue(changes)
-                try anchors.save(page.anchor, for: type.identifier)
+                    // The anchor advances only after its changes are protected on disk.
+                    try queue.enqueue(changes)
+                    try anchors.save(page.anchor, for: type.identifier)
+                case .dailySummary:
+                    guard let quantityType = type as? HKQuantityType else { break }
+                    let now = Date()
+                    let start = Calendar.current.startOfDay(
+                        for: now.addingTimeInterval(-initialLookback)
+                    )
+                    try queue.enqueue(try await dailySummaries(
+                        for: quantityType,
+                        from: start,
+                        to: now
+                    ))
+                case .discard:
+                    break
+                }
                 scanned += 1
             } catch {
                 failures += 1
@@ -318,6 +348,22 @@ final class HealthIncrementalCollector {
             return progress
         }
 
+        if HealthDataCatalog.retentionStrategy(for: type) == .dailySummary,
+           let quantityType = type as? HKQuantityType {
+            let changes = try await historicalDailySummaries(
+                for: quantityType,
+                cutoff: progress.cutoff
+            )
+            try queue.enqueue(changes)
+            progress.recordPage(
+                typeIdentifier: typeIdentifier,
+                changes: changes.count,
+                completedType: true
+            )
+            try historicalProgressStore.save(progress)
+            return progress
+        }
+
         let anchor = try historicalAnchors.anchor(for: typeIdentifier)
         let predicate = HKQuery.predicateForSamples(
             withStart: nil,
@@ -346,6 +392,178 @@ final class HealthIncrementalCollector {
         )
         try historicalProgressStore.save(progress)
         return progress
+    }
+
+    private func historicalDailySummaries(
+        for type: HKQuantityType,
+        cutoff: Date
+    ) async throws -> [HealthChange] {
+        guard let earliestDate = try await earliestSampleDate(for: type, before: cutoff) else {
+            return []
+        }
+        return try await dailySummaries(
+            for: type,
+            from: Calendar.current.startOfDay(for: earliestDate),
+            to: cutoff
+        )
+    }
+
+    private func earliestSampleDate(
+        for type: HKQuantityType,
+        before endDate: Date
+    ) async throws -> Date? {
+        let predicate = HKQuery.predicateForSamples(
+            withStart: nil,
+            end: endDate,
+            options: .strictEndDate
+        )
+        return try await withCheckedThrowingContinuation { continuation in
+            let query = HKSampleQuery(
+                sampleType: type,
+                predicate: predicate,
+                limit: 1,
+                sortDescriptors: [
+                    NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: true),
+                ]
+            ) { _, samples, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                } else {
+                    continuation.resume(returning: samples?.first?.startDate)
+                }
+            }
+            store.execute(query)
+        }
+    }
+
+    private func dailySummaries(
+        for type: HKQuantityType,
+        from startDate: Date,
+        to endDate: Date
+    ) async throws -> [HealthChange] {
+        guard startDate < endDate else { return [] }
+        let units = await preferredUnits(for: [type])
+        guard let unit = units[type] else { return [] }
+        let options = statisticsOptions(for: type)
+        let collection = try await statisticsCollection(
+            for: type,
+            from: startDate,
+            to: endDate,
+            options: options
+        )
+        var changes: [HealthChange] = []
+
+        collection.enumerateStatistics(from: startDate, to: endDate) { statistics, _ in
+            let values: [(label: String, quantity: HKQuantity?)]
+            if options.contains(.cumulativeSum) {
+                values = [("sum", statistics.sumQuantity())]
+            } else if options.contains(.discreteMin) {
+                values = [
+                    ("average", statistics.averageQuantity()),
+                    ("minimum", statistics.minimumQuantity()),
+                    ("maximum", statistics.maximumQuantity()),
+                ]
+            } else {
+                values = [("average", statistics.averageQuantity())]
+            }
+
+            for value in values {
+                guard let quantity = value.quantity else { continue }
+                changes.append(Self.dailySummaryChange(
+                    typeIdentifier: type.identifier,
+                    statistic: value.label,
+                    startDate: statistics.startDate,
+                    endDate: statistics.endDate,
+                    numericValue: quantity.doubleValue(for: unit),
+                    unit: unit.unitString
+                ))
+            }
+        }
+        return changes
+    }
+
+    private func statisticsCollection(
+        for type: HKQuantityType,
+        from startDate: Date,
+        to endDate: Date,
+        options: HKStatisticsOptions
+    ) async throws -> HKStatisticsCollection {
+        let predicate = HKQuery.predicateForSamples(
+            withStart: startDate,
+            end: endDate,
+            options: []
+        )
+        return try await withCheckedThrowingContinuation { continuation in
+            let query = HKStatisticsCollectionQuery(
+                quantityType: type,
+                quantitySamplePredicate: predicate,
+                options: options,
+                anchorDate: Calendar.current.startOfDay(for: startDate),
+                intervalComponents: DateComponents(day: 1)
+            )
+            query.initialResultsHandler = { _, collection, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                } else if let collection {
+                    continuation.resume(returning: collection)
+                } else {
+                    continuation.resume(throwing: HealthPipelineError.missingStatistics)
+                }
+            }
+            store.execute(query)
+        }
+    }
+
+    private func statisticsOptions(for type: HKQuantityType) -> HKStatisticsOptions {
+        switch type.aggregationStyle {
+        case .cumulative:
+            .cumulativeSum
+        case .discreteArithmetic:
+            [.discreteAverage, .discreteMin, .discreteMax]
+        default:
+            .discreteAverage
+        }
+    }
+
+    private static func dailySummaryChange(
+        typeIdentifier: String,
+        statistic: String,
+        startDate: Date,
+        endDate: Date,
+        numericValue: Double,
+        unit: String
+    ) -> HealthChange {
+        let identity = "daily:\(typeIdentifier):\(statistic):\(startDate.timeIntervalSince1970)"
+        let sampleID = deterministicUUID(for: identity)
+        return HealthChange(
+            id: "upsert:\(sampleID.uuidString)",
+            operation: .upsert,
+            sampleID: sampleID,
+            typeIdentifier: typeIdentifier,
+            startDate: startDate,
+            endDate: endDate,
+            numericValue: numericValue,
+            unit: unit,
+            categoryValue: nil,
+            sourceName: nil,
+            sourceBundleIdentifier: nil,
+            sourceVersion: nil,
+            deviceName: nil,
+            deviceModel: nil,
+            deviceManufacturer: nil,
+            metadata: ["aggregation": "daily.\(statistic)"]
+        )
+    }
+
+    private static func deterministicUUID(for value: String) -> UUID {
+        let bytes = Array(SHA256.hash(data: Data(value.utf8)).prefix(16))
+        let uuid: uuid_t = (
+            bytes[0], bytes[1], bytes[2], bytes[3],
+            bytes[4], bytes[5], (bytes[6] & 0x0F) | 0x50, bytes[7],
+            (bytes[8] & 0x3F) | 0x80, bytes[9], bytes[10], bytes[11],
+            bytes[12], bytes[13], bytes[14], bytes[15]
+        )
+        return UUID(uuid: uuid)
     }
 
     private func query(

@@ -1,18 +1,62 @@
 import HealthKit
 
-/// The complete standard HealthKit read surface exposed by the installed SDK.
+/// Kairo's retained HealthKit surface.
 ///
-/// Raw identifier strings let the app keep an exhaustive catalog while still
-/// running on older iOS versions: unsupported identifiers simply fail to
-/// produce an object type and are omitted from the authorization request.
+/// Sparse, high-signal records are kept exactly. Dense telemetry is converted
+/// into daily statistics before it enters the private ledger. Unsupported,
+/// derived, highly sensitive opt-in, and presently unparseable types are not
+/// collected. Apple Health remains the source of truth for every raw sample.
 enum HealthDataCatalog {
-    static var readTypes: Set<HKObjectType> {
-        var types = Set<HKObjectType>()
+    enum RetentionStrategy: Equatable {
+        case raw
+        case dailySummary
+        case discard
+    }
 
+    static var readTypes: Set<HKObjectType> {
+        var types = Set<HKObjectType>(sampleTypes)
+        types.formUnion(characteristicIdentifiers.compactMap(HKObjectType.characteristicType(forIdentifier:)))
+        types.insert(HKObjectType.activitySummaryType())
+        return types
+    }
+
+    static var availableTypeCount: Int { allReadTypes.count }
+    static var retainedTypeCount: Int { sampleTypes.count }
+
+    /// Source streams observed by Kairo. A stream may be stored raw or reduced
+    /// to daily statistics, but is counted only once in import progress.
+    static var sampleTypes: [HKSampleType] {
+        allSampleTypes
+            .filter { retentionStrategy(for: $0) != .discard }
+            .sorted { $0.identifier < $1.identifier }
+    }
+
+    static var rawSampleTypes: [HKSampleType] {
+        sampleTypes.filter { retentionStrategy(for: $0) == .raw }
+    }
+
+    static var summarizedQuantityTypes: [HKQuantityType] {
+        sampleTypes.compactMap { type in
+            guard retentionStrategy(for: type) == .dailySummary else { return nil }
+            return type as? HKQuantityType
+        }
+    }
+
+    static func retentionStrategy(for type: HKSampleType) -> RetentionStrategy {
+        if discardedTypeIdentifiers.contains(type.identifier) {
+            return .discard
+        }
+        if let quantity = type as? HKQuantityType {
+            return rawQuantityIdentifiers.contains(quantity.identifier) ? .raw : .dailySummary
+        }
+        return .raw
+    }
+
+    private static var allReadTypes: Set<HKObjectType> {
+        var types = Set<HKObjectType>()
         types.formUnion(quantityIdentifiers.compactMap(HKObjectType.quantityType(forIdentifier:)))
         types.formUnion(categoryIdentifiers.compactMap(HKObjectType.categoryType(forIdentifier:)))
         types.formUnion(characteristicIdentifiers.compactMap(HKObjectType.characteristicType(forIdentifier:)))
-
         types.insert(HKObjectType.workoutType())
         types.insert(HKObjectType.activitySummaryType())
         types.insert(HKObjectType.audiogramSampleType())
@@ -20,19 +64,15 @@ enum HealthDataCatalog {
         types.insert(HKObjectType.stateOfMindType())
         types.insert(HKSeriesType.workoutRoute())
         types.insert(HKSeriesType.heartbeat())
-
         for identifier in scoredAssessmentIdentifiers {
             types.insert(HKScoredAssessmentType(identifier))
         }
-
         return types
     }
 
-    static var availableTypeCount: Int { readTypes.count }
-    static var sampleTypes: [HKSampleType] {
-        readTypes
+    private static var allSampleTypes: [HKSampleType] {
+        allReadTypes
             .compactMap { $0 as? HKSampleType }
-            .sorted { $0.identifier < $1.identifier }
     }
 
     static let declaredTypeCount = quantityNames.count
@@ -56,6 +96,51 @@ enum HealthDataCatalog {
     private static let scoredAssessmentIdentifiers = scoredAssessmentNames.map {
         HKScoredAssessmentTypeIdentifier(rawValue: "HKScoredAssessmentTypeIdentifier\($0)")
     }
+
+    private static let rawQuantityIdentifiers = Set(rawQuantityNames.map {
+        "HKQuantityTypeIdentifier\($0)"
+    })
+
+    private static let discardedTypeIdentifiers = Set(
+        discardedQuantityNames.map { "HKQuantityTypeIdentifier\($0)" }
+            + discardedCategoryNames.map { "HKCategoryTypeIdentifier\($0)" }
+            + [
+                HKObjectType.audiogramSampleType().identifier,
+                HKSeriesType.heartbeat().identifier,
+                HKSeriesType.workoutRoute().identifier,
+            ]
+    )
+
+    /// Exact events whose timing or individual value is important to later
+    /// causal analysis. Every other retained quantity becomes a daily summary.
+    private static let rawQuantityNames = words("""
+    AppleSleepingBreathingDisturbances AppleSleepingWristTemperature
+    AtrialFibrillationBurden BasalBodyTemperature BloodAlcoholContent BloodGlucose
+    BloodPressureDiastolic BloodPressureSystolic BodyFatPercentage BodyMass
+    BodyTemperature DietaryCaffeine ElectrodermalActivity EstimatedWorkoutEffortScore
+    ForcedExpiratoryVolume1 ForcedVitalCapacity HeartRateRecoveryOneMinute
+    HeartRateVariabilitySDNN Height InhalerUsage InsulinDelivery LeanBodyMass
+    NumberOfAlcoholicBeverages NumberOfTimesFallen OxygenSaturation
+    PeakExpiratoryFlowRate PeripheralPerfusionIndex RespiratoryRate RestingHeartRate
+    SixMinuteWalkTestDistance VO2Max WaistCircumference WalkingHeartRateAverage
+    WorkoutEffortScore
+    """)
+
+    /// BMI is derived from retained height and weight. NikeFuel is obsolete.
+    /// Wheelchair-only telemetry is opt-in rather than collected by default.
+    private static let discardedQuantityNames = words("""
+    BodyMassIndex DistanceWheelchair NikeFuel PushCount
+    """)
+
+    /// Reproductive and sexual-health streams are deliberately opt-in. They
+    /// can be added later without changing the rest of the retention policy.
+    private static let discardedCategoryNames = words("""
+    BleedingAfterPregnancy BleedingDuringPregnancy BreastPain CervicalMucusQuality
+    Contraceptive InfrequentMenstrualCycles IntermenstrualBleeding
+    IrregularMenstrualCycles Lactation MenstrualFlow OvulationTestResult
+    PersistentIntermenstrualBleeding Pregnancy PregnancyTestResult
+    ProgesteroneTestResult ProlongedMenstrualPeriods SexualActivity VaginalDryness
+    """)
 
     private static let quantityNames = words("""
     AppleSleepingWristTemperature BodyFatPercentage BodyMass BodyMassIndex
