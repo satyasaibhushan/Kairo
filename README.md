@@ -50,7 +50,7 @@ The first collection seeds the preceding 24 hours, then opaque HealthKit anchors
 
 ## Synchronization model
 
-Kairo is event-driven rather than cron-driven. HealthKit observer delivery wakes the app when registered signals change, subject to iOS scheduling. Weight, sleep, workouts, mood, and resting heart rate request immediate delivery; high-volume streams such as heart rate and activity request hourly delivery. Opening the app or pulling to refresh also reconciles and uploads immediately.
+Kairo is event-driven rather than cron-driven. Every collectible HealthKit sample stream gets a background observer, subject to iOS scheduling. Weight, sleep, workouts, mood, glucose, oxygen saturation, temperature, inhaler use, resting heart rate, and HRV request immediate delivery; the remaining streams request power-efficient hourly delivery. An observer reconciles only the changed stream before uploading. Opening the app or pulling to refresh performs a complete reconciliation and uploads immediately.
 
 The web ledger is private to its owner and exposes a live dashboard at `/health`. The dashboard refreshes every ten seconds while open. Health data is keyed by HealthKit sample UUID and device ID so repeated delivery is safe.
 

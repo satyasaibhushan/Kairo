@@ -186,8 +186,9 @@ final class HealthIncrementalCollector {
         self.initialLookback = initialLookback
     }
 
-    func collect() async -> HealthCollectionStatus {
-        let sampleTypes = HealthDataCatalog.sampleTypes
+    func collect(
+        sampleTypes: [HKSampleType] = HealthDataCatalog.sampleTypes
+    ) async -> HealthCollectionStatus {
         let units = await preferredUnits(for: sampleTypes.compactMap { $0 as? HKQuantityType })
         var scanned = 0
         var failures = 0

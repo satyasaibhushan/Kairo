@@ -135,7 +135,7 @@ final class HealthStore: ObservableObject {
 
                 let delivery = ObserverDeliveryCompletion(completion)
                 Task { @MainActor [weak self] in
-                    await self?.refresh()
+                    await self?.reconcileObservedChange(for: registration.type)
                     delivery.call()
                 }
             }
@@ -149,52 +149,44 @@ final class HealthStore: ObservableObject {
         }
     }
 
-    private static let quantityTypes: [HKQuantityTypeIdentifier] = [
-        .bodyMass,
-        .heartRate,
-        .restingHeartRate,
-        .heartRateVariabilitySDNN,
-        .activeEnergyBurned,
-        .appleExerciseTime,
-        .appleStandTime,
+    private func reconcileObservedChange(for type: HKSampleType) async {
+        guard authorizationState == .requested, !isRefreshing, let collector else {
+            return
+        }
+
+        isRefreshing = true
+        defer { isRefreshing = false }
+
+        let pass = await collector.collect(sampleTypes: [type])
+        collectionStatus.queuedChanges = pass.queuedChanges
+        collectionStatus.failedTypes = pass.failedTypes
+        collectionStatus.lastCollectedAt = pass.lastCollectedAt
+        collectionStatus.message = pass.failedTypes == 0
+            ? "Reconciled \(type.identifier) after a HealthKit change"
+            : "HealthKit will retry \(type.identifier) on the next pass"
+        await uploadQueuedChanges()
+    }
+
+    private static let immediateTypeIdentifiers: Set<String> = [
+        HKQuantityTypeIdentifier.bodyMass.rawValue,
+        HKQuantityTypeIdentifier.bloodGlucose.rawValue,
+        HKQuantityTypeIdentifier.bodyTemperature.rawValue,
+        HKQuantityTypeIdentifier.oxygenSaturation.rawValue,
+        HKQuantityTypeIdentifier.restingHeartRate.rawValue,
+        HKQuantityTypeIdentifier.heartRateVariabilitySDNN.rawValue,
+        HKQuantityTypeIdentifier.inhalerUsage.rawValue,
+        HKCategoryTypeIdentifier.sleepAnalysis.rawValue,
+        HKObjectType.workoutType().identifier,
+        HKObjectType.stateOfMindType().identifier,
     ]
 
     private static var observerRegistrations: [(type: HKSampleType, frequency: HKUpdateFrequency)] {
-        let immediateIdentifiers: [HKQuantityTypeIdentifier] = [
-            .bodyMass,
-            .restingHeartRate,
-        ]
-
-        let hourlyIdentifiers: [HKQuantityTypeIdentifier] = [
-            .heartRate,
-            .heartRateVariabilitySDNN,
-            .activeEnergyBurned,
-            .appleExerciseTime,
-            .appleStandTime,
-        ]
-
-        var registrations: [(type: HKSampleType, frequency: HKUpdateFrequency)] =
-            immediateIdentifiers.compactMap {
-                guard let type = HKObjectType.quantityType(forIdentifier: $0) else {
-                    return nil
-                }
-                return (type, HKUpdateFrequency.immediate)
-            }
-
-        registrations += hourlyIdentifiers.compactMap {
-            guard let type = HKObjectType.quantityType(forIdentifier: $0) else {
-                return nil
-            }
-            return (type, HKUpdateFrequency.hourly)
+        HealthDataCatalog.sampleTypes.map { type in
+            let frequency: HKUpdateFrequency = immediateTypeIdentifiers.contains(type.identifier)
+                ? .immediate
+                : .hourly
+            return (type, frequency)
         }
-
-        if let sleep = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) {
-            registrations.append((sleep, HKUpdateFrequency.immediate))
-        }
-
-        registrations.append((HKObjectType.workoutType(), HKUpdateFrequency.immediate))
-        registrations.append((HKObjectType.stateOfMindType(), HKUpdateFrequency.immediate))
-        return registrations
     }
 }
 
