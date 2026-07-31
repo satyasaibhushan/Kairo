@@ -96,10 +96,21 @@ final class HealthStore: ObservableObject {
 
     func pairPrivateLedger(using pairingCode: String) async throws {
         let configuration = try HealthSyncConfiguration(pairingCode: pairingCode)
+        let isReplacingLedger = isSyncConfigured
         try syncConfigurationStore.save(configuration)
         isSyncConfigured = true
         syncStatus = .ready
-        await uploadQueuedChanges()
+
+        if isReplacingLedger {
+            guard let collector else {
+                throw HealthPipelineError.localStorageUnavailable
+            }
+            try collector.resetReplayCursors()
+            backfillStatus = .notStarted
+            await refresh()
+        } else {
+            await uploadQueuedChanges()
+        }
     }
 
     func uploadQueuedChanges() async {

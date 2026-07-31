@@ -49,6 +49,7 @@ struct HealthChange: Codable, Identifiable, Equatable {
 enum HealthPipelineError: LocalizedError {
     case queueFull(limit: Int)
     case missingAnchor
+    case localStorageUnavailable
 
     var errorDescription: String? {
         switch self {
@@ -56,6 +57,8 @@ enum HealthPipelineError: LocalizedError {
             "Local health queue reached its safe limit of \(limit) changes. Connect an upload destination before collecting more."
         case .missingAnchor:
             "HealthKit did not return an incremental query anchor."
+        case .localStorageUnavailable:
+            "Local protected storage could not be opened."
         }
     }
 }
@@ -149,6 +152,11 @@ final class HealthAnchorStore {
         try data.write(to: fileURL(for: typeIdentifier), options: [.atomic, .completeFileProtection])
     }
 
+    func reset() throws {
+        guard FileManager.default.fileExists(atPath: directoryURL.path) else { return }
+        try FileManager.default.removeItem(at: directoryURL)
+    }
+
     private func fileURL(for identifier: String) -> URL {
         let safeName = Data(identifier.utf8).base64EncodedString()
             .replacingOccurrences(of: "/", with: "_")
@@ -192,6 +200,11 @@ final class HealthBackfillProgressStore {
             to: fileURL,
             options: [.atomic, .completeFileProtection]
         )
+    }
+
+    func reset() throws {
+        guard FileManager.default.fileExists(atPath: fileURL.path) else { return }
+        try FileManager.default.removeItem(at: fileURL)
     }
 
     private static func defaultFileURL() -> URL {
@@ -287,6 +300,12 @@ final class HealthIncrementalCollector {
 
     func historicalProgress() throws -> HealthBackfillProgress? {
         try historicalProgressStore.load()
+    }
+
+    func resetReplayCursors() throws {
+        try anchors.reset()
+        try historicalAnchors.reset()
+        try historicalProgressStore.reset()
     }
 
     func collectNextHistoricalPage(pageSize: Int = 250) async throws -> HealthBackfillProgress {

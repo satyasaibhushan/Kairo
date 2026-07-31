@@ -257,6 +257,20 @@ struct HealthDashboardView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 11))
                 }
                 .disabled(healthStore.isRefreshing)
+
+                Button {
+                    pairingError = nil
+                    isShowingPairing = true
+                } label: {
+                    HStack {
+                        Text("Replace ledger connection")
+                        Spacer()
+                        Image(systemName: "arrow.triangle.2.circlepath")
+                    }
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(KairoPalette.mint)
+                }
+                .disabled(healthStore.isRefreshing || healthStore.isBackfilling)
             } else {
                 Button {
                     pairingError = nil
@@ -361,10 +375,14 @@ struct HealthDashboardView: View {
                         .font(.system(size: 36))
                         .foregroundStyle(KairoPalette.mint)
 
-                    Text("Pair this iPhone")
+                    Text(healthStore.isSyncConfigured ? "Replace ledger connection" : "Pair this iPhone")
                         .font(.title2.weight(.semibold))
 
-                    Text("Paste the one-time Kairo pairing code. The endpoint credentials are stored only in this iPhone's Keychain.")
+                    Text(
+                        healthStore.isSyncConfigured
+                            ? "Paste the new Kairo pairing code. Existing HealthKit data stays on your iPhone and becomes available to import into the new ledger."
+                            : "Paste the one-time Kairo pairing code. The endpoint credentials are stored only in this iPhone's Keychain."
+                    )
                         .font(.subheadline)
                         .foregroundStyle(KairoPalette.secondaryText)
 
@@ -405,7 +423,11 @@ struct HealthDashboardView: View {
                         }
                     } label: {
                         HStack {
-                            Text(isPairing ? "Pairing and syncing…" : "Pair and upload")
+                            Text(
+                                isPairing
+                                    ? "Pairing and syncing…"
+                                    : healthStore.isSyncConfigured ? "Replace and sync" : "Pair and upload"
+                            )
                             Spacer()
                             if isPairing {
                                 ProgressView().tint(KairoPalette.background)

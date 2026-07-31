@@ -148,6 +148,23 @@ final class HealthMetricTests: XCTestCase {
         XCTAssertTrue(try XCTUnwrap(store.load()).isComplete)
     }
 
+    func testHistoricalBackfillProgressCanBeResetForANewLedger() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = HealthBackfillProgressStore(
+            fileURL: directory.appendingPathComponent("backfill.json")
+        )
+        try store.save(HealthBackfillProgress(
+            cutoff: Date(timeIntervalSince1970: 100),
+            typeIdentifiers: ["weight"]
+        ))
+
+        try store.reset()
+
+        XCTAssertNil(try store.load())
+    }
+
     private func makeChange(
         sampleID: UUID,
         operation: HealthChangeOperation

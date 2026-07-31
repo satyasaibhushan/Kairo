@@ -23,6 +23,7 @@ The current app:
 - persists changes in a deduplicated queue protected by iOS Data Protection;
 - supports manual reconciliation with pull-to-refresh;
 - securely pairs with the private Kairo Health Ledger;
+- safely replaces a ledger connection and resets replay cursors without deleting HealthKit data;
 - uploads idempotent batches only over HTTPS and removes local changes only after acknowledgement;
 - stores the endpoint credentials in the iPhone Keychain;
 - keeps collecting safely offline and resumes upload on the next HealthKit event or manual refresh;
