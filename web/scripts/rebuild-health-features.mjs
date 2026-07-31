@@ -644,10 +644,10 @@ async function rebuildRollingFeatures(parameters) {
          ) AS baseline_samples
        FROM health_daily_features
        WHERE owner_id = $1
-         AND feature_version = $5
+         AND feature_version = $4
          AND numeric_value IS NOT NULL
          AND provenance_json->>'kind' NOT IN ('personal_baseline', 'personal_deviation')
-         AND feature_date BETWEEN ($3::date - INTERVAL '28 days') AND $4::date
+         AND feature_date BETWEEN ($2::date - INTERVAL '28 days') AND $3::date
      ), features AS (
        SELECT
          base.*,
@@ -687,10 +687,10 @@ async function rebuildRollingFeatures(parameters) {
          'baselineSamples', baseline_samples,
          'leakageBoundary', 'strictly_before_feature_date'
        ),
-       $5
+       $4
      FROM features
      WHERE feature_value IS NOT NULL
-       AND feature_date BETWEEN $3::date AND $4::date
+       AND feature_date BETWEEN $2::date AND $3::date
      ON CONFLICT (owner_id, feature_date, feature_key, feature_version) DO UPDATE SET
        numeric_value = EXCLUDED.numeric_value,
        unit = EXCLUDED.unit,
@@ -702,7 +702,7 @@ async function rebuildRollingFeatures(parameters) {
        source_types = EXCLUDED.source_types,
        provenance_json = EXCLUDED.provenance_json,
        computed_at = now()`,
-    parameterValues(parameters),
+    [parameters.ownerId, parameters.minimumDate, parameters.maximumDate, parameters.featureVersion],
   );
 }
 
