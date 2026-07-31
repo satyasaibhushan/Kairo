@@ -760,7 +760,7 @@ async function rebuildProfiles(parameters) {
        profiles.feature_date,
        jsonb_build_object(
          'date', profiles.feature_date,
-         'timeZone', $2,
+         'timeZone', $2::text,
          'featureVersion', $5,
          'features', profiles.features
        ),
