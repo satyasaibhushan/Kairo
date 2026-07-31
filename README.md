@@ -1,6 +1,13 @@
 # Kairo
 
-Kairo is a private life assistant that turns personal signals into useful context. This repository starts with the iPhone Health Bridge: a native SwiftUI app that reads user-approved Apple Health data and prepares it for event-driven synchronization with the Kairo platform.
+Kairo is a private life assistant that turns personal signals into useful context. This single repository contains both the native iPhone Health Bridge and the Vercel web platform that receives, stores, and explains its signals.
+
+## Repository layout
+
+- `Kairo/` — SwiftUI iPhone app and HealthKit bridge
+- `KairoTests/` — iOS unit tests
+- `web/` — Next.js web app, private Health Ledger API, Neon schema, and Vercel configuration
+- `docs/` — product and implementation documentation
 
 ## First milestone
 
@@ -18,7 +25,7 @@ The current app:
 - securely pairs with the private Kairo Health Ledger;
 - uploads idempotent batches only over HTTPS and removes local changes only after acknowledgement;
 - stores the endpoint credentials in the iPhone Keychain;
-- keeps collecting safely offline and resumes upload on the next HealthKit event or manual refresh.
+- keeps collecting safely offline and resumes upload on the next HealthKit event or manual refresh;
 - imports pre-Kairo history in resumable 250-change pages without allowing the protected queue to grow unbounded.
 
 ## Requirements
@@ -55,6 +62,18 @@ Kairo is event-driven rather than cron-driven. Every collectible HealthKit sampl
 
 The web ledger is private to its owner and exposes a live dashboard at `/health`. The dashboard refreshes every ten seconds while open. Health data is keyed by HealthKit sample UUID and device ID so repeated delivery is safe.
 
+## Run the web app
+
+```sh
+cd web
+npm install
+cp .env.example .env.local
+npm run db:migrate
+npm run dev
+```
+
+The Vercel project must use `web` as its Root Directory. Complete Neon, environment-variable, domain, and pairing instructions are in [`web/README.md`](web/README.md).
+
 ## Validate
 
 ```sh
@@ -66,6 +85,14 @@ xcodebuild test \
 ```
 
 Background delivery must be tested on a physical device.
+
+Validate the web app separately:
+
+```sh
+cd web
+npm test
+npm run lint
+```
 
 ## Next milestone
 

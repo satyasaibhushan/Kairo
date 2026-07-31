@@ -11,10 +11,17 @@ test("uses the standard Next.js runtime and Neon ledger", async () => {
     readFile(new URL("../app/api/health/changes/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/auth.ts", import.meta.url), "utf8"),
   ]);
+  const manifest = JSON.parse(packageJson);
+  const installedPackages = {
+    ...manifest.dependencies,
+    ...manifest.devDependencies,
+  };
 
   assert.match(packageJson, /"dev": "next dev"/);
   assert.match(packageJson, /@neondatabase\/serverless/);
-  assert.doesNotMatch(packageJson, /vinext|wrangler|cloudflare/i);
+  for (const packageName of Object.keys(installedPackages)) {
+    assert.doesNotMatch(packageName, /vinext|wrangler|cloudflare/i);
+  }
   assert.doesNotMatch(data, /cloudflare:workers|D1Database/);
   assert.match(ingestion, /jsonb_to_recordset/);
   assert.match(ingestion, /ON CONFLICT \(owner_id, device_id, sample_id\)/);
