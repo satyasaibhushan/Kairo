@@ -2,6 +2,7 @@ import SwiftUI
 
 struct HealthDashboardView: View {
     @EnvironmentObject private var healthStore: HealthStore
+    @Environment(\.scenePhase) private var scenePhase
 
     private let columns = [
         GridItem(.flexible(), spacing: 12),
@@ -19,6 +20,7 @@ struct HealthDashboardView: View {
 
                     if healthStore.authorizationState == .requested {
                         readings
+                        collectionCard
                         syncNote
                     }
                 }
@@ -30,6 +32,10 @@ struct HealthDashboardView: View {
             }
         }
         .preferredColorScheme(.dark)
+        .onChange(of: scenePhase) { _, phase in
+            guard phase == .active else { return }
+            Task { await healthStore.refresh() }
+        }
     }
 
     private var header: some View {
@@ -158,6 +164,63 @@ struct HealthDashboardView: View {
         .padding(.bottom, 12)
     }
 
+    private var collectionCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Label("On-device collection", systemImage: "lock.shield")
+                    .font(.footnote.weight(.semibold))
+                Spacer()
+                Text(collectionLabel)
+                    .font(.caption2.monospaced().weight(.bold))
+                    .foregroundStyle(
+                        healthStore.collectionStatus.isHealthy
+                            ? KairoPalette.mint
+                            : Color.orange
+                    )
+            }
+
+            HStack(spacing: 0) {
+                collectionValue(
+                    String(healthStore.collectionStatus.queuedChanges),
+                    label: "protected changes"
+                )
+                Divider().overlay(KairoPalette.panelBorder)
+                collectionValue(
+                    "\(healthStore.collectionStatus.typesScanned)/\(HealthDataCatalog.sampleTypes.count)",
+                    label: "types reconciled"
+                )
+            }
+            .frame(maxWidth: .infinity)
+
+            Text(healthStore.collectionStatus.message)
+                .font(.caption)
+                .foregroundStyle(KairoPalette.secondaryText)
+
+            Text("Stored with iPhone Data Protection. Nothing is uploaded yet.")
+                .font(.caption2)
+                .foregroundStyle(KairoPalette.tertiaryText)
+        }
+        .padding(16)
+        .background(KairoPalette.panel)
+        .overlay {
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(KairoPalette.panelBorder, lineWidth: 1)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+    }
+
+    private func collectionValue(_ value: String, label: String) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(value)
+                .font(.title3.monospacedDigit().weight(.semibold))
+                .foregroundStyle(.white)
+            Text(label)
+                .font(.caption2)
+                .foregroundStyle(KairoPalette.tertiaryText)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
     private var connectionLabel: String {
         switch healthStore.authorizationState {
         case .requested: "CONNECTED"
@@ -166,6 +229,13 @@ struct HealthDashboardView: View {
         case .notRequested: "NOT CONNECTED"
         case .unavailable: "UNAVAILABLE"
         }
+    }
+
+    private var collectionLabel: String {
+        if healthStore.isRefreshing {
+            return "SCANNING"
+        }
+        return healthStore.collectionStatus.isHealthy ? "READY" : "RETRYING"
     }
 
     private var connectionColor: Color {

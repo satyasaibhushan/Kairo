@@ -6,8 +6,10 @@ final class HealthStore: ObservableObject {
     @Published private(set) var authorizationState: HealthAuthorizationState = .notRequested
     @Published private(set) var snapshot = HealthSnapshot.empty
     @Published private(set) var isRefreshing = false
+    @Published private(set) var collectionStatus = HealthCollectionStatus()
 
     private let store = HKHealthStore()
+    private lazy var collector = try? HealthIncrementalCollector(store: store)
     private var observerQueries: [HKObserverQuery] = []
 
     func prepare() async {
@@ -61,6 +63,12 @@ final class HealthStore: ObservableObject {
 
         do {
             snapshot = try await loader.load()
+            if let collector {
+                collectionStatus = await collector.collect()
+            } else {
+                collectionStatus.message = "Local protected storage could not be opened"
+                collectionStatus.failedTypes = 1
+            }
         } catch {
             authorizationState = .failed(error.localizedDescription)
         }
@@ -91,10 +99,10 @@ final class HealthStore: ObservableObject {
                     return
                 }
 
-                completion()
-
+                let delivery = ObserverDeliveryCompletion(completion)
                 Task { @MainActor [weak self] in
                     await self?.refresh()
+                    delivery.call()
                 }
             }
 
@@ -153,5 +161,17 @@ final class HealthStore: ObservableObject {
         registrations.append((HKObjectType.workoutType(), HKUpdateFrequency.immediate))
         registrations.append((HKObjectType.stateOfMindType(), HKUpdateFrequency.immediate))
         return registrations
+    }
+}
+
+private final class ObserverDeliveryCompletion: @unchecked Sendable {
+    private let completion: () -> Void
+
+    init(_ completion: @escaping () -> Void) {
+        self.completion = completion
+    }
+
+    func call() {
+        completion()
     }
 }

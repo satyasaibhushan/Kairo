@@ -29,6 +29,12 @@ enum HealthDataCatalog {
     }
 
     static var availableTypeCount: Int { readTypes.count }
+    static var sampleTypes: [HKSampleType] {
+        readTypes
+            .compactMap { $0 as? HKSampleType }
+            .sorted { $0.identifier < $1.identifier }
+    }
+
     static let declaredTypeCount = quantityNames.count
         + categoryNames.count
         + characteristicNames.count

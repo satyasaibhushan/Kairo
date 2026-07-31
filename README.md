@@ -11,6 +11,9 @@ The current app:
 - displays mood, sleep, rings, weight, heart rate, resting heart rate, and HRV;
 - refreshes when HealthKit reports relevant changes;
 - batches high-volume signals using hourly background delivery;
+- incrementally reconciles every authorized HealthKit sample stream;
+- normalizes values, units, source apps, devices, metadata, and deletions;
+- persists changes in a deduplicated queue protected by iOS Data Protection;
 - supports manual reconciliation with pull-to-refresh;
 - keeps all processing on-device until a Kairo API is configured.
 
@@ -37,7 +40,9 @@ The current app:
 
 HealthKit intentionally does not reveal whether an individual read permission was denied. Kairo therefore displays unavailable data as “No data” without claiming that permission was denied.
 
-The standard catalog currently declares 205 directly readable object types from the installed SDK. Clinical records and iOS 26 medication objects use additional authorization systems and remain separate, explicit opt-ins. Dashboard cards stay curated even when broader collection is authorized.
+The standard catalog currently declares 205 directly readable object types. On the installed SDK, 196 resolve to sample streams that support anchored incremental collection. The exact available count is computed at runtime because SDK and OS support differ. Characteristics and activity summaries use separate query APIs and remain visible through the curated snapshot until their dedicated collectors are added. Clinical records and iOS 26 medication objects use additional authorization systems and remain separate, explicit opt-ins. Dashboard cards stay curated even when broader collection is authorized.
+
+The first collection seeds the preceding 24 hours, then opaque HealthKit anchors fetch only additions, updates, and deletions. The queue has a 25,000-change safety limit and refuses new changes instead of silently dropping data. Full historical backfill waits for an authenticated upload destination so high-frequency history cannot fill the phone.
 
 ## Validate
 
@@ -53,4 +58,4 @@ Background delivery must be tested on a physical device.
 
 ## Next milestone
 
-The next slice adds the authenticated Kairo sync API, anchored incremental queries, durable offline uploads, and UUID-based deduplication. HealthKit anchors will advance only after the server acknowledges each batch.
+The next slice adds the authenticated Kairo sync API and acknowledged queue draining, followed by a controlled full-history backfill. Upload batches will be idempotent by HealthKit UUID and operation.

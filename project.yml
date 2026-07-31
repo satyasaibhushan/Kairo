@@ -56,6 +56,7 @@ targets:
       - target: Kairo
     settings:
       base:
+        GENERATE_INFOPLIST_FILE: true
         PRODUCT_BUNDLE_IDENTIFIER: com.satyasaibhushan.kairo.tests
 
 schemes:
