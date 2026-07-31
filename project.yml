@@ -29,8 +29,12 @@ targets:
       path: Kairo/Resources/Info.plist
     entitlements:
       path: Kairo/Resources/Kairo.entitlements
+      properties:
+        com.apple.developer.healthkit: true
+        com.apple.developer.healthkit.background-delivery: true
     settings:
       base:
+        DEVELOPMENT_TEAM: NPJKKT52N4
         PRODUCT_BUNDLE_IDENTIFIER: com.satyasaibhushan.kairo
         PRODUCT_NAME: Kairo
         TARGETED_DEVICE_FAMILY: "1"
