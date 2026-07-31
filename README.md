@@ -15,7 +15,10 @@ The current app:
 - normalizes values, units, source apps, devices, metadata, and deletions;
 - persists changes in a deduplicated queue protected by iOS Data Protection;
 - supports manual reconciliation with pull-to-refresh;
-- keeps all processing on-device until a Kairo API is configured.
+- securely pairs with the private Kairo Health Ledger;
+- uploads idempotent batches only over HTTPS and removes local changes only after acknowledgement;
+- stores the endpoint credentials in the iPhone Keychain;
+- keeps collecting safely offline and resumes upload on the next HealthKit event or manual refresh.
 
 ## Requirements
 
@@ -37,12 +40,19 @@ The current app:
 4. Confirm that HealthKit and Background Delivery appear under Signing & Capabilities.
 5. Select your connected iPhone and run the app.
 6. Tap **Choose health signals** and approve only the categories you want Kairo to read.
+7. Tap **Pair private ledger**, paste the private pairing code, then tap **Pair and upload**.
 
 HealthKit intentionally does not reveal whether an individual read permission was denied. Kairo therefore displays unavailable data as “No data” without claiming that permission was denied.
 
 The standard catalog currently declares 205 directly readable object types. On the installed SDK, 196 resolve to sample streams that support anchored incremental collection. The exact available count is computed at runtime because SDK and OS support differ. Characteristics and activity summaries use separate query APIs and remain visible through the curated snapshot until their dedicated collectors are added. Clinical records and iOS 26 medication objects use additional authorization systems and remain separate, explicit opt-ins. Dashboard cards stay curated even when broader collection is authorized.
 
-The first collection seeds the preceding 24 hours, then opaque HealthKit anchors fetch only additions, updates, and deletions. The queue has a 25,000-change safety limit and refuses new changes instead of silently dropping data. Full historical backfill waits for an authenticated upload destination so high-frequency history cannot fill the phone.
+The first collection seeds the preceding 24 hours, then opaque HealthKit anchors fetch only additions, updates, and deletions. The queue has a 25,000-change safety limit and refuses new changes instead of silently dropping data. Uploads are delivered in batches of 250 to the authenticated private ledger. A failed or interrupted request leaves the complete batch on the phone for retry.
+
+## Synchronization model
+
+Kairo is event-driven rather than cron-driven. HealthKit observer delivery wakes the app when registered signals change, subject to iOS scheduling. Weight, sleep, workouts, mood, and resting heart rate request immediate delivery; high-volume streams such as heart rate and activity request hourly delivery. Opening the app or pulling to refresh also reconciles and uploads immediately.
+
+The web ledger is private to its owner and exposes a live dashboard at `/health`. The dashboard refreshes every ten seconds while open. Health data is keyed by HealthKit sample UUID and device ID so repeated delivery is safe.
 
 ## Validate
 
@@ -58,4 +68,4 @@ Background delivery must be tested on a physical device.
 
 ## Next milestone
 
-The next slice adds the authenticated Kairo sync API and acknowledged queue draining, followed by a controlled full-history backfill. Upload batches will be idempotent by HealthKit UUID and operation.
+Add controlled historical backfill, then use the ledger to compute daily features and learn which signals predict self-reported mood for this person. Medication and clinical-record sources remain separate explicit opt-ins because Apple gives them additional privacy and authorization semantics.

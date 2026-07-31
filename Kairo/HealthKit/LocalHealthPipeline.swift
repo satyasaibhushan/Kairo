@@ -82,6 +82,16 @@ final class ProtectedHealthQueue {
 
     var count: Int { changes.count }
 
+    func nextBatch(limit: Int) -> [HealthChange] {
+        Array(changes.prefix(max(0, limit)))
+    }
+
+    func acknowledge(ids: Set<String>) throws {
+        guard !ids.isEmpty else { return }
+        changes.removeAll { ids.contains($0.id) }
+        try persist()
+    }
+
     func enqueue(_ incoming: [HealthChange]) throws {
         guard !incoming.isEmpty else { return }
 
@@ -217,6 +227,16 @@ final class HealthIncrementalCollector {
                 ? "All sample types reconciled on this iPhone"
                 : "Reconciled \(scanned) types; \(failures) need another pass"
         )
+    }
+
+    var queuedChangeCount: Int { queue.count }
+
+    func nextUploadBatch(limit: Int) -> [HealthChange] {
+        queue.nextBatch(limit: limit)
+    }
+
+    func acknowledgeUploadedChanges(ids: Set<String>) throws {
+        try queue.acknowledge(ids: ids)
     }
 
     private func query(

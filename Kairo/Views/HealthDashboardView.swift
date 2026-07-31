@@ -3,6 +3,10 @@ import SwiftUI
 struct HealthDashboardView: View {
     @EnvironmentObject private var healthStore: HealthStore
     @Environment(\.scenePhase) private var scenePhase
+    @State private var isShowingPairing = false
+    @State private var pairingCode = ""
+    @State private var pairingError: String?
+    @State private var isPairing = false
 
     private let columns = [
         GridItem(.flexible(), spacing: 12),
@@ -21,6 +25,7 @@ struct HealthDashboardView: View {
                     if healthStore.authorizationState == .requested {
                         readings
                         collectionCard
+                        cloudSyncCard
                         syncNote
                     }
                 }
@@ -35,6 +40,9 @@ struct HealthDashboardView: View {
         .onChange(of: scenePhase) { _, phase in
             guard phase == .active else { return }
             Task { await healthStore.refresh() }
+        }
+        .sheet(isPresented: $isShowingPairing) {
+            pairingSheet
         }
     }
 
@@ -196,7 +204,11 @@ struct HealthDashboardView: View {
                 .font(.caption)
                 .foregroundStyle(KairoPalette.secondaryText)
 
-            Text("Stored with iPhone Data Protection. Nothing is uploaded yet.")
+            Text(
+                healthStore.isSyncConfigured
+                    ? "Removed locally only after the private ledger acknowledges each batch."
+                    : "Stored with iPhone Data Protection. Nothing is uploaded until you pair."
+            )
                 .font(.caption2)
                 .foregroundStyle(KairoPalette.tertiaryText)
         }
@@ -207,6 +219,147 @@ struct HealthDashboardView: View {
                 .stroke(KairoPalette.panelBorder, lineWidth: 1)
         }
         .clipShape(RoundedRectangle(cornerRadius: 16))
+    }
+
+    private var cloudSyncCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                Label("Private Health Ledger", systemImage: "cloud.fill")
+                    .font(.footnote.weight(.semibold))
+                Spacer()
+                Text(healthStore.syncStatus.label)
+                    .font(.caption2.monospaced().weight(.bold))
+                    .foregroundStyle(
+                        healthStore.syncStatus.isFailure ? Color.orange : KairoPalette.mint
+                    )
+            }
+
+            Text(healthStore.syncStatus.detail)
+                .font(.caption)
+                .foregroundStyle(KairoPalette.secondaryText)
+                .fixedSize(horizontal: false, vertical: true)
+
+            if healthStore.isSyncConfigured {
+                Button {
+                    Task { await healthStore.uploadQueuedChanges() }
+                } label: {
+                    HStack {
+                        Text("Sync now")
+                        Spacer()
+                        Image(systemName: "arrow.up.circle.fill")
+                    }
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(KairoPalette.background)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 11)
+                    .background(KairoPalette.mint)
+                    .clipShape(RoundedRectangle(cornerRadius: 11))
+                }
+                .disabled(healthStore.isRefreshing)
+            } else {
+                Button {
+                    pairingError = nil
+                    isShowingPairing = true
+                } label: {
+                    HStack {
+                        Text("Pair private ledger")
+                        Spacer()
+                        Image(systemName: "link")
+                    }
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(KairoPalette.mint)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 11)
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 11)
+                            .stroke(KairoPalette.mint.opacity(0.55), lineWidth: 1)
+                    }
+                }
+            }
+        }
+        .padding(16)
+        .background(KairoPalette.panel)
+        .overlay {
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(KairoPalette.panelBorder, lineWidth: 1)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+    }
+
+    private var pairingSheet: some View {
+        NavigationStack {
+            ZStack {
+                KairoPalette.background.ignoresSafeArea()
+                VStack(alignment: .leading, spacing: 18) {
+                    Image(systemName: "lock.icloud.fill")
+                        .font(.system(size: 36))
+                        .foregroundStyle(KairoPalette.mint)
+
+                    Text("Pair this iPhone")
+                        .font(.title2.weight(.semibold))
+
+                    Text("Paste the one-time Kairo pairing code. The endpoint credentials are stored only in this iPhone's Keychain.")
+                        .font(.subheadline)
+                        .foregroundStyle(KairoPalette.secondaryText)
+
+                    SecureField("Pairing code", text: $pairingCode)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .font(.caption.monospaced())
+                        .padding(14)
+                        .background(KairoPalette.panel)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+
+                    if let pairingError {
+                        Text(pairingError)
+                            .font(.caption)
+                            .foregroundStyle(.orange)
+                    }
+
+                    Button {
+                        isPairing = true
+                        pairingError = nil
+                        Task {
+                            do {
+                                try await healthStore.pairPrivateLedger(using: pairingCode)
+                                pairingCode = ""
+                                isPairing = false
+                                isShowingPairing = false
+                            } catch {
+                                pairingError = error.localizedDescription
+                                isPairing = false
+                            }
+                        }
+                    } label: {
+                        HStack {
+                            Text(isPairing ? "Pairing and syncing…" : "Pair and upload")
+                            Spacer()
+                            if isPairing {
+                                ProgressView().tint(KairoPalette.background)
+                            } else {
+                                Image(systemName: "arrow.right")
+                            }
+                        }
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(KairoPalette.background)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 13)
+                        .background(KairoPalette.mint)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
+                    .disabled(pairingCode.isEmpty || isPairing)
+
+                    Spacer()
+                }
+                .padding(22)
+            }
+            .preferredColorScheme(.dark)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { isShowingPairing = false }
+                }
+            }
+        }
     }
 
     private func collectionValue(_ value: String, label: String) -> some View {

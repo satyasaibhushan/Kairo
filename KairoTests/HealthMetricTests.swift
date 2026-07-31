@@ -48,7 +48,9 @@ final class HealthMetricTests: XCTestCase {
 
         try queue.enqueue([deletion])
         XCTAssertEqual(queue.count, 1)
-        XCTAssertEqual(try ProtectedHealthQueue(fileURL: fileURL, capacity: 5).count, 1)
+        try queue.acknowledge(ids: [deletion.id])
+        XCTAssertEqual(queue.count, 0)
+        XCTAssertEqual(try ProtectedHealthQueue(fileURL: fileURL, capacity: 5).count, 0)
     }
 
     func testProtectedQueueRefusesToDropChangesAtCapacity() throws {
@@ -65,6 +67,25 @@ final class HealthMetricTests: XCTestCase {
             try queue.enqueue([makeChange(sampleID: UUID(), operation: .upsert)])
         )
         XCTAssertEqual(queue.count, 1)
+    }
+
+    func testPairingCodeRequiresHTTPSAndDecodesCredentials() throws {
+        let payload: [String: String] = [
+            "endpoint": "https://kairo.example/api/health/changes",
+            "ingestToken": "ingest-secret",
+            "siteAccessToken": "site-secret",
+        ]
+        let data = try JSONSerialization.data(withJSONObject: payload, options: [.sortedKeys])
+        let code = data.base64EncodedString()
+            .replacingOccurrences(of: "+", with: "-")
+            .replacingOccurrences(of: "/", with: "_")
+            .replacingOccurrences(of: "=", with: "")
+
+        let configuration = try HealthSyncConfiguration(pairingCode: code)
+
+        XCTAssertEqual(configuration.endpoint.absoluteString, payload["endpoint"])
+        XCTAssertEqual(configuration.ingestToken, payload["ingestToken"])
+        XCTAssertEqual(configuration.siteAccessToken, payload["siteAccessToken"])
     }
 
     private func makeChange(

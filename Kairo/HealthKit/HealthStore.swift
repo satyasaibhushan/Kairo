@@ -7,10 +7,19 @@ final class HealthStore: ObservableObject {
     @Published private(set) var snapshot = HealthSnapshot.empty
     @Published private(set) var isRefreshing = false
     @Published private(set) var collectionStatus = HealthCollectionStatus()
+    @Published private(set) var syncStatus: HealthSyncStatus = .notConfigured
+    @Published private(set) var isSyncConfigured = false
 
     private let store = HKHealthStore()
+    private let syncConfigurationStore = HealthSyncConfigurationStore()
     private lazy var collector = try? HealthIncrementalCollector(store: store)
+    private lazy var uploadClient = HealthUploadClient(configurationStore: syncConfigurationStore)
     private var observerQueries: [HKObserverQuery] = []
+
+    init() {
+        isSyncConfigured = (try? syncConfigurationStore.load()) != nil
+        syncStatus = isSyncConfigured ? .ready : .notConfigured
+    }
 
     func prepare() async {
         guard HKHealthStore.isHealthDataAvailable() else {
@@ -65,12 +74,37 @@ final class HealthStore: ObservableObject {
             snapshot = try await loader.load()
             if let collector {
                 collectionStatus = await collector.collect()
+                await uploadQueuedChanges()
             } else {
                 collectionStatus.message = "Local protected storage could not be opened"
                 collectionStatus.failedTypes = 1
             }
         } catch {
             authorizationState = .failed(error.localizedDescription)
+        }
+    }
+
+    func pairPrivateLedger(using pairingCode: String) async throws {
+        let configuration = try HealthSyncConfiguration(pairingCode: pairingCode)
+        try syncConfigurationStore.save(configuration)
+        isSyncConfigured = true
+        syncStatus = .ready
+        await uploadQueuedChanges()
+    }
+
+    func uploadQueuedChanges() async {
+        guard isSyncConfigured, let collector else {
+            syncStatus = .notConfigured
+            return
+        }
+        syncStatus = .uploading(sent: 0)
+        do {
+            let result = try await uploadClient.uploadAll(from: collector)
+            collectionStatus.queuedChanges = result.remaining
+            syncStatus = .synced(date: Date(), sent: result.sent)
+        } catch {
+            collectionStatus.queuedChanges = collector.queuedChangeCount
+            syncStatus = .failed(error.localizedDescription)
         }
     }
 
