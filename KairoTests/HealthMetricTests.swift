@@ -2,6 +2,11 @@ import XCTest
 @testable import Kairo
 
 final class HealthMetricTests: XCTestCase {
+    func testHealthCatalogCoversTheCompleteStandardSDKSurface() {
+        XCTAssertEqual(HealthDataCatalog.declaredTypeCount, 205)
+        XCTAssertGreaterThanOrEqual(HealthDataCatalog.availableTypeCount, 200)
+    }
+
     func testEveryMetricHasAReadableTitleAndSymbol() {
         for metric in HealthMetric.allCases {
             XCTAssertFalse(metric.title.isEmpty)

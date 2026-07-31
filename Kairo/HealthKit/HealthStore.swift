@@ -40,7 +40,7 @@ final class HealthStore: ObservableObject {
         authorizationState = .requesting
 
         do {
-            try await store.requestAuthorization(toShare: [], read: Self.readTypes)
+            try await store.requestAuthorization(toShare: [], read: HealthDataCatalog.readTypes)
             authorizationState = .requested
             startObservers()
             await refresh()
@@ -68,7 +68,7 @@ final class HealthStore: ObservableObject {
 
     private func authorizationRequestStatus() async throws -> HKAuthorizationRequestStatus {
         try await withCheckedThrowingContinuation { continuation in
-            store.getRequestStatusForAuthorization(toShare: [], read: Self.readTypes) { status, error in
+            store.getRequestStatusForAuthorization(toShare: [], read: HealthDataCatalog.readTypes) { status, error in
                 if let error {
                     continuation.resume(throwing: error)
                 } else {
@@ -116,21 +116,6 @@ final class HealthStore: ObservableObject {
         .appleExerciseTime,
         .appleStandTime,
     ]
-
-    private static var readTypes: Set<HKObjectType> {
-        var types = Set<HKObjectType>(
-            quantityTypes.compactMap(HKObjectType.quantityType(forIdentifier:))
-        )
-
-        if let sleep = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) {
-            types.insert(sleep)
-        }
-
-        types.insert(HKObjectType.workoutType())
-        types.insert(HKObjectType.activitySummaryType())
-        types.insert(HKObjectType.stateOfMindType())
-        return types
-    }
 
     private static var observerRegistrations: [(type: HKSampleType, frequency: HKUpdateFrequency)] {
         let immediateIdentifiers: [HKQuantityTypeIdentifier] = [

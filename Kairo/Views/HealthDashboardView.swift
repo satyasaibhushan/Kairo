@@ -79,6 +79,10 @@ struct HealthDashboardView: View {
                 Text(healthStore.authorizationState.detail)
                     .font(.footnote)
                     .foregroundStyle(KairoPalette.secondaryText)
+
+                Text("\(HealthDataCatalog.availableTypeCount) HealthKit data types available on this iPhone")
+                    .font(.caption.monospaced())
+                    .foregroundStyle(KairoPalette.tertiaryText)
             }
 
             if healthStore.authorizationState == .notRequested

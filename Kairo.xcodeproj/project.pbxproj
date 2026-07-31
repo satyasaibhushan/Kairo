@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		1C88B839F81CD3100EE5A549 /* HealthDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E12E3CF93588B24BF2FB93A /* HealthDashboardView.swift */; };
+		53169BACBC191548A1D82909 /* HealthDataCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90B9B3578F68A49ACECCAE1E /* HealthDataCatalog.swift */; };
 		80E815DE1BE32404D6CB88D6 /* HealthMetricCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACDE57048C8245B1A1197D3B /* HealthMetricCard.swift */; };
 		ADC93FCFE53A3F0B76B4AF68 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 83EDFB36F46404DA05134E2D /* LaunchScreen.storyboard */; };
 		C2C815BDB948D159AB9DA1CB /* KairoApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 901935EAFB4892CB533512DB /* KairoApp.swift */; };
@@ -36,6 +37,7 @@
 		7177D61B1C241DEDE6D70FA9 /* Kairo.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Kairo.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		83EDFB36F46404DA05134E2D /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
 		901935EAFB4892CB533512DB /* KairoApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KairoApp.swift; sourceTree = "<group>"; };
+		90B9B3578F68A49ACECCAE1E /* HealthDataCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthDataCatalog.swift; sourceTree = "<group>"; };
 		9B0E973CA87290FE8916A74E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		ACDE57048C8245B1A1197D3B /* HealthMetricCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthMetricCard.swift; sourceTree = "<group>"; };
 		C2AF3419115C0444B10D94E3 /* HealthStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthStore.swift; sourceTree = "<group>"; };
@@ -114,6 +116,7 @@
 		D3E8C1708F36790D2EA3EEF0 /* HealthKit */ = {
 			isa = PBXGroup;
 			children = (
+				90B9B3578F68A49ACECCAE1E /* HealthDataCatalog.swift */,
 				6869566B12249DE571329616 /* HealthSnapshotLoader.swift */,
 				C2AF3419115C0444B10D94E3 /* HealthStore.swift */,
 			);
@@ -231,6 +234,7 @@
 			files = (
 				F85D1473F1F266603B3492FC /* HealthAuthorizationState.swift in Sources */,
 				1C88B839F81CD3100EE5A549 /* HealthDashboardView.swift in Sources */,
+				53169BACBC191548A1D82909 /* HealthDataCatalog.swift in Sources */,
 				E01C6D72CE05CC09C186B5B2 /* HealthMetric.swift in Sources */,
 				80E815DE1BE32404D6CB88D6 /* HealthMetricCard.swift in Sources */,
 				C7C91D33BCEF7FC0533929B7 /* HealthSnapshotLoader.swift in Sources */,

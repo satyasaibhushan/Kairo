@@ -7,6 +7,7 @@ Kairo is a private life assistant that turns personal signals into useful contex
 The current app:
 
 - requests fine-grained read access to Apple Health;
+- offers the complete standard HealthKit read catalog available on the device;
 - displays mood, sleep, rings, weight, heart rate, resting heart rate, and HRV;
 - refreshes when HealthKit reports relevant changes;
 - batches high-volume signals using hourly background delivery;
@@ -35,6 +36,8 @@ The current app:
 6. Tap **Choose health signals** and approve only the categories you want Kairo to read.
 
 HealthKit intentionally does not reveal whether an individual read permission was denied. Kairo therefore displays unavailable data as “No data” without claiming that permission was denied.
+
+The standard catalog currently declares 205 directly readable object types from the installed SDK. Clinical records and iOS 26 medication objects use additional authorization systems and remain separate, explicit opt-ins. Dashboard cards stay curated even when broader collection is authorized.
 
 ## Validate
 
