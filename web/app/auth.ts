@@ -11,8 +11,8 @@ export type KairoOwner = {
 
 export async function authenticateOwner(password: string): Promise<boolean> {
   const expected = process.env.KAIRO_DASHBOARD_PASSWORD;
-  if (!expected || expected.length < 12) {
-    throw new Error("KAIRO_DASHBOARD_PASSWORD must contain at least 12 characters");
+  if (!expected || expected.length < 8) {
+    throw new Error("KAIRO_DASHBOARD_PASSWORD must contain at least 8 characters");
   }
   return constantTimeEqual(password, expected);
 }

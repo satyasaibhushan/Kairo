@@ -64,6 +64,7 @@ export default function LoginPage() {
             name="password"
             type="password"
             autoComplete="current-password"
+            minLength={8}
             required
             autoFocus
           />

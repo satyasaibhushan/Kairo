@@ -25,7 +25,8 @@ npm run dev
 ```
 
 Set every value in `.env.local`. Generate secrets with a password manager or
-`openssl rand -hex 32`; never commit them.
+`openssl rand -hex 32`; never commit them. The dashboard password must be at
+least 8 characters, while the session secret must be at least 32 characters.
 
 ## Deploy to Vercel
 

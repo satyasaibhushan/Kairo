@@ -30,6 +30,8 @@ test("uses the standard Next.js runtime and Neon ledger", async () => {
   assert.match(ingestion, /ON CONFLICT \(owner_id, device_id, sample_id\)/);
   assert.match(auth, /httpOnly: true/);
   assert.match(auth, /sameSite: "strict"/);
+  assert.match(auth, /expected\.length < 8/);
+  assert.match(loginPage, /minLength=\{8\}/);
   assert.doesNotMatch(layout, /next\/headers|generateMetadata/);
   assert.doesNotMatch(loginPage, /force-dynamic|use server|next\/headers/);
   assert.doesNotMatch(healthPage, /force-dynamic|loadHealthSummary|requireOwner/);
