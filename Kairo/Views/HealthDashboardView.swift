@@ -26,6 +26,7 @@ struct HealthDashboardView: View {
                         readings
                         collectionCard
                         cloudSyncCard
+                        historicalBackfillCard
                         syncNote
                     }
                 }
@@ -275,6 +276,71 @@ struct HealthDashboardView: View {
                             .stroke(KairoPalette.mint.opacity(0.55), lineWidth: 1)
                     }
                 }
+            }
+        }
+        .padding(16)
+        .background(KairoPalette.panel)
+        .overlay {
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(KairoPalette.panelBorder, lineWidth: 1)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+    }
+
+    private var historicalBackfillCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                Label("Health history", systemImage: "clock.arrow.trianglehead.counterclockwise.rotate.90")
+                    .font(.footnote.weight(.semibold))
+                Spacer()
+                Text(healthStore.backfillStatus.label)
+                    .font(.caption2.monospaced().weight(.bold))
+                    .foregroundStyle(
+                        healthStore.backfillStatus.isRunning ? KairoPalette.mint : KairoPalette.tertiaryText
+                    )
+            }
+
+            Text(healthStore.backfillStatus.detail)
+                .font(.caption)
+                .foregroundStyle(KairoPalette.secondaryText)
+                .fixedSize(horizontal: false, vertical: true)
+
+            if let progress = healthStore.backfillStatus.progress {
+                ProgressView(value: progress.fractionComplete)
+                    .tint(KairoPalette.mint)
+
+                HStack {
+                    Text("\(progress.completedTypes)/\(progress.totalTypes) streams")
+                    Spacer()
+                    Text("\(progress.importedChanges.formatted()) changes")
+                }
+                .font(.caption2.monospacedDigit())
+                .foregroundStyle(KairoPalette.tertiaryText)
+            }
+
+            if healthStore.isBackfilling {
+                Button("Pause after this batch") {
+                    healthStore.pauseHistoricalBackfill()
+                }
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(KairoPalette.mint)
+            } else if healthStore.backfillStatus.progress?.isComplete != true {
+                Button {
+                    Task { await healthStore.startOrResumeHistoricalBackfill() }
+                } label: {
+                    HStack {
+                        Text(healthStore.backfillStatus.progress == nil ? "Import complete history" : "Resume history import")
+                        Spacer()
+                        Image(systemName: "arrow.down.to.line")
+                    }
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(KairoPalette.background)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 11)
+                    .background(KairoPalette.mint)
+                    .clipShape(RoundedRectangle(cornerRadius: 11))
+                }
+                .disabled(!healthStore.isSyncConfigured)
             }
         }
         .padding(16)

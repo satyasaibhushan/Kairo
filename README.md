@@ -19,6 +19,7 @@ The current app:
 - uploads idempotent batches only over HTTPS and removes local changes only after acknowledgement;
 - stores the endpoint credentials in the iPhone Keychain;
 - keeps collecting safely offline and resumes upload on the next HealthKit event or manual refresh.
+- imports pre-Kairo history in resumable 250-change pages without allowing the protected queue to grow unbounded.
 
 ## Requirements
 
@@ -46,7 +47,7 @@ HealthKit intentionally does not reveal whether an individual read permission wa
 
 The standard catalog currently declares 205 directly readable object types. On the installed SDK, 196 resolve to sample streams that support anchored incremental collection. The exact available count is computed at runtime because SDK and OS support differ. Characteristics and activity summaries use separate query APIs and remain visible through the curated snapshot until their dedicated collectors are added. Clinical records and iOS 26 medication objects use additional authorization systems and remain separate, explicit opt-ins. Dashboard cards stay curated even when broader collection is authorized.
 
-The first collection seeds the preceding 24 hours, then opaque HealthKit anchors fetch only additions, updates, and deletions. The queue has a 25,000-change safety limit and refuses new changes instead of silently dropping data. Uploads are delivered in batches of 250 to the authenticated private ledger. A failed or interrupted request leaves the complete batch on the phone for retry.
+The first collection seeds the preceding 24 hours, then opaque HealthKit anchors fetch only additions, updates, and deletions. A separate historical cursor walks records before that live cutoff. It protects one 250-change page locally, waits for server acknowledgement, and then continues, so a large archive cannot fill the phone. The queue has a 25,000-change safety limit and refuses new changes instead of silently dropping data. A failed or interrupted request leaves the complete batch on the phone for retry, while historical stream progress resumes after the last protected page.
 
 ## Synchronization model
 
@@ -68,4 +69,4 @@ Background delivery must be tested on a physical device.
 
 ## Next milestone
 
-Add controlled historical backfill, then use the ledger to compute daily features and learn which signals predict self-reported mood for this person. Medication and clinical-record sources remain separate explicit opt-ins because Apple gives them additional privacy and authorization semantics.
+Use the complete ledger to compute daily features and learn which signals predict self-reported mood for this person. Medication and clinical-record sources remain separate explicit opt-ins because Apple gives them additional privacy and authorization semantics.

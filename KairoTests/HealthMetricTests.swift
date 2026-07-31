@@ -95,6 +95,59 @@ final class HealthMetricTests: XCTestCase {
         XCTAssertEqual(status.detail, "250 of 1,000 changes acknowledged.")
     }
 
+    func testHistoricalBackfillKeepsTheCurrentStreamUntilItsFinalPage() {
+        let cutoff = Date(timeIntervalSince1970: 100)
+        var progress = HealthBackfillProgress(
+            cutoff: cutoff,
+            typeIdentifiers: ["heart-rate", "sleep"],
+            updatedAt: cutoff
+        )
+
+        progress.recordPage(
+            typeIdentifier: "heart-rate",
+            changes: 250,
+            completedType: false,
+            at: cutoff
+        )
+        XCTAssertEqual(progress.nextTypeIdentifier, "heart-rate")
+
+        progress.recordPage(
+            typeIdentifier: "heart-rate",
+            changes: 17,
+            completedType: true,
+            at: cutoff
+        )
+        XCTAssertEqual(progress.nextTypeIdentifier, "sleep")
+        XCTAssertEqual(progress.importedChanges, 267)
+        XCTAssertEqual(progress.fractionComplete, 0.5)
+    }
+
+    func testHistoricalBackfillProgressPersistsAcrossLaunches() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = HealthBackfillProgressStore(
+            fileURL: directory.appendingPathComponent("backfill.json")
+        )
+        let cutoff = Date(timeIntervalSince1970: 100)
+        var progress = HealthBackfillProgress(
+            cutoff: cutoff,
+            typeIdentifiers: ["weight"],
+            updatedAt: cutoff
+        )
+        progress.recordPage(
+            typeIdentifier: "weight",
+            changes: 3,
+            completedType: true,
+            at: cutoff
+        )
+
+        try store.save(progress)
+
+        XCTAssertEqual(try store.load(), progress)
+        XCTAssertTrue(try XCTUnwrap(store.load()).isComplete)
+    }
+
     private func makeChange(
         sampleID: UUID,
         operation: HealthChangeOperation

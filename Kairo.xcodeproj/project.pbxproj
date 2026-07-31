@@ -21,6 +21,7 @@
 		E4A99F509931BD47EB635232 /* HealthStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2AF3419115C0444B10D94E3 /* HealthStore.swift */; };
 		EED346DB74D477FF7D469E12 /* LocalHealthPipeline.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8DE4B91402BEA29A4957727 /* LocalHealthPipeline.swift */; };
 		F3C59BAA6A38A5523D6332C2 /* HealthSyncConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FEB518082EE83E56C98FE48 /* HealthSyncConfiguration.swift */; };
+		F610BD6DB97C8DC0297AF4BF /* HealthBackfillProgress.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F62F09CD419C655DC1B4AFB /* HealthBackfillProgress.swift */; };
 		F85D1473F1F266603B3492FC /* HealthAuthorizationState.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A95CB1DC0496DC1DCB609D /* HealthAuthorizationState.swift */; };
 /* End PBXBuildFile section */
 
@@ -37,6 +38,7 @@
 /* Begin PBXFileReference section */
 		05D3086F2B92089538F04568 /* Kairo.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Kairo.entitlements; sourceTree = "<group>"; };
 		0C9DF9F5AFB0847C50D35628 /* KairoTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = KairoTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		0F62F09CD419C655DC1B4AFB /* HealthBackfillProgress.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthBackfillProgress.swift; sourceTree = "<group>"; };
 		1E12E3CF93588B24BF2FB93A /* HealthDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthDashboardView.swift; sourceTree = "<group>"; };
 		483ED8995C746FFC21426CCA /* HealthCollectionStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthCollectionStatus.swift; sourceTree = "<group>"; };
 		64C2B20E5847D8B77D61CC3B /* HealthSyncStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthSyncStatus.swift; sourceTree = "<group>"; };
@@ -106,6 +108,7 @@
 			isa = PBXGroup;
 			children = (
 				F0A95CB1DC0496DC1DCB609D /* HealthAuthorizationState.swift */,
+				0F62F09CD419C655DC1B4AFB /* HealthBackfillProgress.swift */,
 				483ED8995C746FFC21426CCA /* HealthCollectionStatus.swift */,
 				D25551EAEEE9C59D702AA2AB /* HealthMetric.swift */,
 				64C2B20E5847D8B77D61CC3B /* HealthSyncStatus.swift */,
@@ -248,6 +251,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				F85D1473F1F266603B3492FC /* HealthAuthorizationState.swift in Sources */,
+				F610BD6DB97C8DC0297AF4BF /* HealthBackfillProgress.swift in Sources */,
 				A72B333650BAE15F5B1870F4 /* HealthCollectionStatus.swift in Sources */,
 				1C88B839F81CD3100EE5A549 /* HealthDashboardView.swift in Sources */,
 				53169BACBC191548A1D82909 /* HealthDataCatalog.swift in Sources */,

@@ -159,6 +159,45 @@ final class HealthAnchorStore {
         let root = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
         return root.appendingPathComponent("Kairo/HealthAnchors", isDirectory: true)
     }
+
+    static func historical() -> HealthAnchorStore {
+        let root = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        return HealthAnchorStore(
+            directoryURL: root.appendingPathComponent("Kairo/HealthBackfillAnchors", isDirectory: true)
+        )
+    }
+}
+
+final class HealthBackfillProgressStore {
+    private let fileURL: URL
+
+    init(fileURL: URL = HealthBackfillProgressStore.defaultFileURL()) {
+        self.fileURL = fileURL
+    }
+
+    func load() throws -> HealthBackfillProgress? {
+        guard FileManager.default.fileExists(atPath: fileURL.path) else { return nil }
+        return try JSONDecoder.health.decode(
+            HealthBackfillProgress.self,
+            from: Data(contentsOf: fileURL)
+        )
+    }
+
+    func save(_ progress: HealthBackfillProgress) throws {
+        try FileManager.default.createDirectory(
+            at: fileURL.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        try JSONEncoder.health.encode(progress).write(
+            to: fileURL,
+            options: [.atomic, .completeFileProtection]
+        )
+    }
+
+    private static func defaultFileURL() -> URL {
+        let root = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        return root.appendingPathComponent("Kairo/health-backfill-progress.json")
+    }
 }
 
 @MainActor
@@ -172,17 +211,23 @@ final class HealthIncrementalCollector {
     private let store: HKHealthStore
     private let queue: ProtectedHealthQueue
     private let anchors: HealthAnchorStore
+    private let historicalAnchors: HealthAnchorStore
+    private let historicalProgressStore: HealthBackfillProgressStore
     private let initialLookback: TimeInterval
 
     init(
         store: HKHealthStore,
         queue: ProtectedHealthQueue? = nil,
         anchors: HealthAnchorStore = HealthAnchorStore(),
+        historicalAnchors: HealthAnchorStore = .historical(),
+        historicalProgressStore: HealthBackfillProgressStore = HealthBackfillProgressStore(),
         initialLookback: TimeInterval = 24 * 60 * 60
     ) throws {
         self.store = store
         self.queue = try queue ?? ProtectedHealthQueue()
         self.anchors = anchors
+        self.historicalAnchors = historicalAnchors
+        self.historicalProgressStore = historicalProgressStore
         self.initialLookback = initialLookback
     }
 
@@ -240,17 +285,62 @@ final class HealthIncrementalCollector {
         try queue.acknowledge(ids: ids)
     }
 
+    func historicalProgress() throws -> HealthBackfillProgress? {
+        try historicalProgressStore.load()
+    }
+
+    func collectNextHistoricalPage(pageSize: Int = 250) async throws -> HealthBackfillProgress {
+        var progress = try historicalProgressStore.load() ?? HealthBackfillProgress(
+            cutoff: Date().addingTimeInterval(-initialLookback),
+            typeIdentifiers: HealthDataCatalog.sampleTypes.map(\.identifier)
+        )
+        guard let typeIdentifier = progress.nextTypeIdentifier,
+              let type = HealthDataCatalog.sampleTypes.first(where: { $0.identifier == typeIdentifier }) else {
+            return progress
+        }
+
+        let anchor = try historicalAnchors.anchor(for: typeIdentifier)
+        let predicate = HKQuery.predicateForSamples(
+            withStart: nil,
+            end: progress.cutoff,
+            options: .strictEndDate
+        )
+        let page = try await query(
+            type: type,
+            predicate: predicate,
+            anchor: anchor,
+            limit: pageSize
+        )
+        let units = await preferredUnits(for: [type].compactMap { $0 as? HKQuantityType })
+        let changes = page.samples.map {
+            normalize($0, preferredUnit: ($0.sampleType as? HKQuantityType).flatMap { units[$0] })
+        } + page.deletions.map {
+            HealthChange.deletion($0, typeIdentifier: typeIdentifier)
+        }
+
+        try queue.enqueue(changes)
+        try historicalAnchors.save(page.anchor, for: typeIdentifier)
+        progress.recordPage(
+            typeIdentifier: typeIdentifier,
+            changes: changes.count,
+            completedType: changes.count < pageSize
+        )
+        try historicalProgressStore.save(progress)
+        return progress
+    }
+
     private func query(
         type: HKSampleType,
         predicate: NSPredicate?,
-        anchor: HKQueryAnchor?
+        anchor: HKQueryAnchor?,
+        limit: Int = HKObjectQueryNoLimit
     ) async throws -> QueryPage {
         try await withCheckedThrowingContinuation { continuation in
             let query = HKAnchoredObjectQuery(
                 type: type,
                 predicate: predicate,
                 anchor: anchor,
-                limit: HKObjectQueryNoLimit
+                limit: limit
             ) { _, samples, deletions, newAnchor, error in
                 if let error {
                     continuation.resume(throwing: error)

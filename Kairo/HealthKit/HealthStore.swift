@@ -9,16 +9,26 @@ final class HealthStore: ObservableObject {
     @Published private(set) var collectionStatus = HealthCollectionStatus()
     @Published private(set) var syncStatus: HealthSyncStatus = .notConfigured
     @Published private(set) var isSyncConfigured = false
+    @Published private(set) var backfillStatus: HealthBackfillStatus = .notStarted
+    @Published private(set) var isBackfilling = false
 
     private let store = HKHealthStore()
     private let syncConfigurationStore = HealthSyncConfigurationStore()
-    private lazy var collector = try? HealthIncrementalCollector(store: store)
+    private let backfillProgressStore = HealthBackfillProgressStore()
+    private lazy var collector = try? HealthIncrementalCollector(
+        store: store,
+        historicalProgressStore: backfillProgressStore
+    )
     private lazy var uploadClient = HealthUploadClient(configurationStore: syncConfigurationStore)
     private var observerQueries: [HKObserverQuery] = []
+    private var shouldPauseBackfill = false
 
     init() {
         isSyncConfigured = (try? syncConfigurationStore.load()) != nil
         syncStatus = isSyncConfigured ? .ready : .notConfigured
+        if let progress = try? backfillProgressStore.load() {
+            backfillStatus = progress.isComplete ? .completed(progress) : .paused(progress)
+        }
     }
 
     func prepare() async {
@@ -61,7 +71,7 @@ final class HealthStore: ObservableObject {
     }
 
     func refresh() async {
-        guard authorizationState == .requested, !isRefreshing else {
+        guard authorizationState == .requested, !isRefreshing, !isBackfilling else {
             return
         }
 
@@ -112,6 +122,49 @@ final class HealthStore: ObservableObject {
         }
     }
 
+    func startOrResumeHistoricalBackfill() async {
+        guard authorizationState == .requested,
+              isSyncConfigured,
+              !isBackfilling,
+              let collector else {
+            return
+        }
+
+        isBackfilling = true
+        shouldPauseBackfill = false
+        defer { isBackfilling = false }
+
+        do {
+            await uploadQueuedChanges()
+            guard !syncStatus.isFailure else {
+                backfillStatus = .failed(syncStatus.detail, try collector.historicalProgress())
+                return
+            }
+
+            while !Task.isCancelled, !shouldPauseBackfill {
+                let progress = try await collector.collectNextHistoricalPage()
+                backfillStatus = progress.isComplete ? .completed(progress) : .running(progress)
+
+                await uploadQueuedChanges()
+                guard !syncStatus.isFailure else {
+                    backfillStatus = .failed(syncStatus.detail, progress)
+                    return
+                }
+                guard !progress.isComplete else { return }
+            }
+
+            if let progress = try collector.historicalProgress(), !progress.isComplete {
+                backfillStatus = .paused(progress)
+            }
+        } catch {
+            backfillStatus = .failed(error.localizedDescription, try? collector.historicalProgress())
+        }
+    }
+
+    func pauseHistoricalBackfill() {
+        shouldPauseBackfill = true
+    }
+
     private func authorizationRequestStatus() async throws -> HKAuthorizationRequestStatus {
         try await withCheckedThrowingContinuation { continuation in
             store.getRequestStatusForAuthorization(toShare: [], read: HealthDataCatalog.readTypes) { status, error in
@@ -154,7 +207,10 @@ final class HealthStore: ObservableObject {
     }
 
     private func reconcileObservedChange(for type: HKSampleType) async {
-        guard authorizationState == .requested, !isRefreshing, let collector else {
+        guard authorizationState == .requested,
+              !isRefreshing,
+              !isBackfilling,
+              let collector else {
             return
         }
 
