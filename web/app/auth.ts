@@ -1,7 +1,6 @@
 import "server-only";
 
 import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
 
 const sessionCookie = "kairo_owner_session";
 const sessionLifetimeSeconds = 30 * 24 * 60 * 60;
@@ -53,23 +52,6 @@ export async function getOwner(): Promise<KairoOwner | null> {
   if (!(await constantTimeEqual(suppliedSignature, expectedSignature))) return null;
 
   return { displayName: process.env.KAIRO_OWNER_NAME?.trim() || "Bhushan" };
-}
-
-export async function requireOwner(returnTo: string): Promise<KairoOwner> {
-  const owner = await getOwner();
-  if (owner) return owner;
-  redirect(`/login?returnTo=${encodeURIComponent(safeReturnPath(returnTo))}`);
-}
-
-export function safeReturnPath(value: string): string {
-  if (!value.startsWith("/") || value.startsWith("//")) return "/health";
-  try {
-    const url = new URL(value, "https://kairo.local");
-    if (url.origin !== "https://kairo.local" || url.pathname === "/login") return "/health";
-    return `${url.pathname}${url.search}${url.hash}`;
-  } catch {
-    return "/health";
-  }
 }
 
 async function sign(payload: string): Promise<string> {

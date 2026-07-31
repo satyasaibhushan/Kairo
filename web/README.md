@@ -7,6 +7,7 @@ device-authenticated ingestion endpoint used by the Kairo iPhone app.
 ## Architecture
 
 - Next.js App Router on Vercel
+- statically generated browser pages with no request-time SSR
 - Neon Postgres for durable HealthKit records
 - bearer-token authentication for iPhone uploads
 - signed, HTTP-only owner sessions for the health dashboard
@@ -69,8 +70,10 @@ requires `Authorization: Bearer <KAIRO_INGEST_TOKEN>`. Batch IDs and HealthKit
 sample IDs make retries safe; records are acknowledged only after the database
 commit succeeds.
 
-The `/health` dashboard and `GET /api/health/summary` require the signed owner
-session created at `/login`.
+The browser receives static HTML for `/`, `/login`, and `/health`. Login and
+health data load through small serverless API calls after the page is already
+interactive. `GET /api/health/summary` still verifies the signed owner session
+before returning any private data.
 
 ## Validation
 

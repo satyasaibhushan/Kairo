@@ -6,7 +6,7 @@ Kairo is a private life assistant that turns personal signals into useful contex
 
 - `Kairo/` — SwiftUI iPhone app and HealthKit bridge
 - `KairoTests/` — iOS unit tests
-- `web/` — Next.js web app, private Health Ledger API, Neon schema, and Vercel configuration
+- `web/` — statically rendered Next.js interface, private Health Ledger API, Neon schema, and Vercel configuration
 - `docs/` — product and implementation documentation
 
 ## First milestone
@@ -61,6 +61,8 @@ The first collection seeds the preceding 24 hours, then opaque HealthKit anchors
 Kairo is event-driven rather than cron-driven. Every collectible HealthKit sample stream gets a background observer, subject to iOS scheduling. Weight, sleep, workouts, mood, glucose, oxygen saturation, temperature, inhaler use, resting heart rate, and HRV request immediate delivery; the remaining streams request power-efficient hourly delivery. An observer reconciles only the changed stream before uploading. Opening the app or pulling to refresh performs a complete reconciliation and uploads immediately.
 
 The web ledger is private to its owner and exposes a live dashboard at `/health`. The dashboard refreshes every ten seconds while open. Health data is keyed by HealthKit sample UUID and device ID so repeated delivery is safe.
+
+All browser pages are generated as static assets. Authentication, HealthKit ingestion, and private summary reads use Vercel serverless routes; page navigation never waits for request-time SSR.
 
 ## Run the web app
 

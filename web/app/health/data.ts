@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getDatabase } from "../../lib/database";
+import type { HealthSummary } from "./health-summary";
 
 type CountRow = { value: string | number };
 type LatestRow = {
@@ -12,24 +13,6 @@ type LatestRow = {
   sourceName: string | null;
 };
 type DayRow = { day: string; value: string | number };
-
-export type HealthSummary = {
-  totalSamples: number;
-  trackedTypes: number;
-  batchesReceived: number;
-  latestReceivedAt: string | null;
-  latest: LatestRow[];
-  days: Array<{ day: string; value: number }>;
-};
-
-export const emptyHealthSummary: HealthSummary = {
-  totalSamples: 0,
-  trackedTypes: 0,
-  batchesReceived: 0,
-  latestReceivedAt: null,
-  latest: [],
-  days: [],
-};
 
 export async function loadHealthSummary(): Promise<HealthSummary> {
   const sql = getDatabase();

@@ -5,11 +5,14 @@ import test from "node:test";
 const root = new URL("../", import.meta.url);
 
 test("uses the standard Next.js runtime and Neon ledger", async () => {
-  const [packageJson, data, ingestion, auth] = await Promise.all([
+  const [packageJson, data, ingestion, auth, layout, loginPage, healthPage] = await Promise.all([
     readFile(new URL("../package.json", import.meta.url), "utf8"),
     readFile(new URL("../app/health/data.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/health/changes/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/auth.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/login/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/health/page.tsx", import.meta.url), "utf8"),
   ]);
   const manifest = JSON.parse(packageJson);
   const installedPackages = {
@@ -27,6 +30,9 @@ test("uses the standard Next.js runtime and Neon ledger", async () => {
   assert.match(ingestion, /ON CONFLICT \(owner_id, device_id, sample_id\)/);
   assert.match(auth, /httpOnly: true/);
   assert.match(auth, /sameSite: "strict"/);
+  assert.doesNotMatch(layout, /next\/headers|generateMetadata/);
+  assert.doesNotMatch(loginPage, /force-dynamic|use server|next\/headers/);
+  assert.doesNotMatch(healthPage, /force-dynamic|loadHealthSummary|requireOwner/);
 });
 
 test("contains the complete Vercel deployment handoff", async () => {
@@ -49,6 +55,9 @@ test("contains the complete Vercel deployment handoff", async () => {
   assert.match(pairing, /kairo\.bhushan\.fun\/api\/health\/changes/);
   assert.match(config, /"framework": "nextjs"/);
   await access(new URL("../app/login/page.tsx", import.meta.url));
+  await access(new URL("../app/api/auth/login/route.ts", import.meta.url));
+  await access(new URL("../app/api/auth/logout/route.ts", import.meta.url));
+  await access(new URL("../app/api/auth/session/route.ts", import.meta.url));
   await access(new URL("../public/og.png", import.meta.url));
   await access(root);
 });
