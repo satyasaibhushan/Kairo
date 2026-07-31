@@ -112,6 +112,8 @@ test("keeps assistant health access bounded and owner authenticated", async () =
   const data = await readFile(new URL("../app/health/intelligence/data.ts", import.meta.url), "utf8");
   assert.match(data, /Factor scores are predictive associations/);
   assert.match(data, /Missing data means unknown, not zero/);
+  assert.match(data, /kairo\.jarvis\.health-view\.v1/);
+  assert.match(data, /notablePersonalDeviations/);
   assert.match(data, /LIMIT 12/);
   assert.match(data, /LIMIT 10/);
 });

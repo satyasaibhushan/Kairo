@@ -99,7 +99,7 @@ npm run lint
 
 ## Health intelligence foundation
 
-Kairo now keeps the raw HealthKit ledger separate from a rebuildable intelligence layer: canonical signal definitions, wake-day sleep episodes, personal-day features, trailing baselines, compact daily profiles, learned-factor storage, and owner-authenticated AI context APIs. The model and safety rules are documented in [`docs/intelligence-architecture.md`](docs/intelligence-architecture.md), with feature definitions in [`docs/health-feature-catalog.md`](docs/health-feature-catalog.md).
+Kairo now keeps the raw HealthKit ledger separate from a rebuildable intelligence layer: canonical signal definitions, wake-day sleep episodes, personal-day features, trailing baselines, compact daily profiles, learned-factor storage, and owner-authenticated AI context APIs. The model and safety rules are documented in [`docs/intelligence-architecture.md`](docs/intelligence-architecture.md), with feature definitions in [`docs/health-feature-catalog.md`](docs/health-feature-catalog.md) and the assistant presentation contract in [`docs/jarvis-health-view-model.md`](docs/jarvis-health-view-model.md).
 
 Build or rebuild derived health data without resyncing the raw ledger:
 

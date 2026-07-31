@@ -11,6 +11,7 @@ import type {
 } from "./types";
 
 type SettingsRow = { homeTimeZone: string; featureVersion: string };
+type FreshnessRow = { lastReceivedAt: string | null; latestEffectiveAt: string | null };
 type ProfileRow = {
   profileDate: string;
   profile: DailyHealthProfile;
@@ -148,34 +149,45 @@ export async function loadAIContext(
   const sql = getDatabase();
   const ownerId = ownerIdentifier();
   const settings = await loadSettings();
-  const recentMood = await sql`SELECT
-      (start_date AT TIME ZONE ${settings.homeTimeZone})::date::text AS date,
-      AVG(numeric_value) AS valence,
-      COUNT(*)::int AS "sampleCount"
-    FROM health_current_observations
-    WHERE owner_id = ${ownerId}
-      AND operation = 'upsert'
-      AND type_identifier = 'HKStateOfMindTypeIdentifier'
-      AND numeric_value IS NOT NULL
-      AND (start_date AT TIME ZONE ${settings.homeTimeZone})::date
-        BETWEEN (${day.date}::date - ${lookbackDays}::int) AND ${day.date}::date
-    GROUP BY (start_date AT TIME ZONE ${settings.homeTimeZone})::date
-    ORDER BY date`;
-  const insights = await sql`SELECT
-      insight_type AS "insightType",
-      title,
-      narrative,
-      period_start::text AS "periodStart",
-      period_end::text AS "periodEnd",
-      confidence,
-      status,
-      evidence_json AS evidence
-    FROM health_insights
-    WHERE owner_id = ${ownerId}
-      AND period_end >= (${day.date}::date - ${lookbackDays}::int)
-      AND (expires_at IS NULL OR expires_at > now())
-    ORDER BY created_at DESC
-    LIMIT 10`;
+  const [recentMood, insights, freshnessRows] = await Promise.all([
+    sql`SELECT
+        (start_date AT TIME ZONE ${settings.homeTimeZone})::date::text AS date,
+        AVG(numeric_value) AS valence,
+        COUNT(*)::int AS "sampleCount"
+      FROM health_current_observations
+      WHERE owner_id = ${ownerId}
+        AND operation = 'upsert'
+        AND type_identifier = 'HKStateOfMindTypeIdentifier'
+        AND numeric_value IS NOT NULL
+        AND (start_date AT TIME ZONE ${settings.homeTimeZone})::date
+          BETWEEN (${day.date}::date - ${lookbackDays}::int) AND ${day.date}::date
+      GROUP BY (start_date AT TIME ZONE ${settings.homeTimeZone})::date
+      ORDER BY date`,
+    sql`SELECT
+        insight_type AS "insightType",
+        title,
+        narrative,
+        period_start::text AS "periodStart",
+        period_end::text AS "periodEnd",
+        confidence,
+        status,
+        evidence_json AS evidence
+      FROM health_insights
+      WHERE owner_id = ${ownerId}
+        AND period_end >= (${day.date}::date - ${lookbackDays}::int)
+        AND (expires_at IS NULL OR expires_at > now())
+      ORDER BY created_at DESC
+      LIMIT 10`,
+    sql`SELECT
+        MAX(received_at)::text AS "lastReceivedAt",
+        MAX(COALESCE(end_date, start_date))::text AS "latestEffectiveAt"
+      FROM health_current_observations
+      WHERE owner_id = ${ownerId}`,
+  ]);
+  const freshness = (freshnessRows as unknown as FreshnessRow[])[0]
+    ?? { lastReceivedAt: null, latestEffectiveAt: null };
+  const recentMoodEvidence = recentMood as unknown as Record<string, unknown>[];
+  const activeInsights = insights as unknown as Record<string, unknown>[];
 
   return {
     schema: "kairo.health.ai-context.v1",
@@ -187,8 +199,65 @@ export async function loadAIContext(
       "certainty when data is missing or low quality",
     ],
     day,
-    recentMood,
-    insights,
+    recentMood: recentMoodEvidence,
+    insights: activeInsights,
+    jarvis: buildJarvisHealthView(day, recentMoodEvidence, activeInsights, freshness),
+  };
+}
+
+function buildJarvisHealthView(
+  day: IntelligenceEvidence,
+  recentMood: readonly Record<string, unknown>[],
+  insights: readonly Record<string, unknown>[],
+  freshness: Record<string, unknown>,
+): Record<string, unknown> {
+  const features = day.profile?.features ?? {};
+  const deviations = Object.entries(features)
+    .filter(([featureKey, feature]) => featureKey.endsWith(".zscore_28d")
+      && typeof feature.value === "number"
+      && Math.abs(feature.value) >= 0.75)
+    .sort((left, right) => Math.abs(right[1].value ?? 0) - Math.abs(left[1].value ?? 0))
+    .slice(0, 12)
+    .map(([featureKey, feature]) => ({
+      featureKey: featureKey.slice(0, -".zscore_28d".length),
+      direction: (feature.value ?? 0) > 0 ? "above_personal_baseline" : "below_personal_baseline",
+      standardDeviations: feature.value,
+      quality: feature.quality,
+      coverage: feature.coverage ?? null,
+    }));
+  const patterns = day.factors
+    .filter((factor) => factor.kScore !== null
+      && factor.predictiveGain !== null
+      && factor.predictiveGain > 0)
+    .slice(0, 8);
+
+  return {
+    schema: "kairo.jarvis.health-view.v1",
+    now: {
+      date: day.date,
+      freshness,
+      coverage: day.domainCoverage,
+      notablePersonalDeviations: deviations,
+    },
+    patterns,
+    memory: {
+      recentDeclaredMood: recentMood,
+      activeInsights: insights,
+    },
+    needsAttention: [
+      ...(day.mood.length === 0
+        ? ["No State of Mind entry exists for this day; mood prediction has no same-day ground truth."]
+        : []),
+      ...(patterns.length === 0
+        ? ["No health factor has yet beaten the temporal personal-baseline model with sufficient evidence."]
+        : []),
+    ],
+    responseRules: [
+      "Lead with what changed relative to the owner, not a generic population average.",
+      "Separate observed facts, predictive patterns, and hypotheses.",
+      "Include freshness, coverage, target horizon, and uncertainty.",
+      "Prefer one useful follow-up or low-risk experiment over a long list of correlations.",
+    ],
   };
 }
 
