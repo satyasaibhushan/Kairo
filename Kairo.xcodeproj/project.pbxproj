@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		1C88B839F81CD3100EE5A549 /* HealthDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E12E3CF93588B24BF2FB93A /* HealthDashboardView.swift */; };
 		80E815DE1BE32404D6CB88D6 /* HealthMetricCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACDE57048C8245B1A1197D3B /* HealthMetricCard.swift */; };
+		ADC93FCFE53A3F0B76B4AF68 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 83EDFB36F46404DA05134E2D /* LaunchScreen.storyboard */; };
 		C2C815BDB948D159AB9DA1CB /* KairoApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 901935EAFB4892CB533512DB /* KairoApp.swift */; };
 		C7C91D33BCEF7FC0533929B7 /* HealthSnapshotLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6869566B12249DE571329616 /* HealthSnapshotLoader.swift */; };
 		E01C6D72CE05CC09C186B5B2 /* HealthMetric.swift in Sources */ = {isa = PBXBuildFile; fileRef = D25551EAEEE9C59D702AA2AB /* HealthMetric.swift */; };
@@ -32,7 +33,8 @@
 		0C9DF9F5AFB0847C50D35628 /* KairoTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = KairoTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		1E12E3CF93588B24BF2FB93A /* HealthDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthDashboardView.swift; sourceTree = "<group>"; };
 		6869566B12249DE571329616 /* HealthSnapshotLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthSnapshotLoader.swift; sourceTree = "<group>"; };
-		7177D61B1C241DEDE6D70FA9 /* Kairo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Kairo.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		7177D61B1C241DEDE6D70FA9 /* Kairo.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Kairo.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		83EDFB36F46404DA05134E2D /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
 		901935EAFB4892CB533512DB /* KairoApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KairoApp.swift; sourceTree = "<group>"; };
 		9B0E973CA87290FE8916A74E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		ACDE57048C8245B1A1197D3B /* HealthMetricCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthMetricCard.swift; sourceTree = "<group>"; };
@@ -75,6 +77,7 @@
 			children = (
 				9B0E973CA87290FE8916A74E /* Info.plist */,
 				05D3086F2B92089538F04568 /* Kairo.entitlements */,
+				83EDFB36F46404DA05134E2D /* LaunchScreen.storyboard */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -133,6 +136,7 @@
 			buildConfigurationList = BEB7E67CF690A59DA4FD43B9 /* Build configuration list for PBXNativeTarget "Kairo" */;
 			buildPhases = (
 				33F0450028C1FA3C9D71EE43 /* Sources */,
+				7D26F2FFF036CD1108AFEB5A /* Resources */,
 			);
 			buildRules = (
 			);
@@ -173,6 +177,7 @@
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
 					92631A9C59B27ED72FFA931F = {
+						DevelopmentTeam = NPJKKT52N4;
 						ProvisioningStyle = Automatic;
 					};
 					AD7F0BA87190E437BE83FBEE = {
@@ -199,6 +204,17 @@
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		7D26F2FFF036CD1108AFEB5A /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				ADC93FCFE53A3F0B76B4AF68 /* LaunchScreen.storyboard in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		1E5B9B1E5ABD235D2F00562B /* Sources */ = {
