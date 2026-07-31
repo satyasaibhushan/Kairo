@@ -3,6 +3,7 @@ import { spawn } from "node:child_process";
 if (process.env.VERCEL_ENV === "production") {
   console.log("Production build detected; applying pending database migrations.");
   await import("./migrate.mjs");
+  await import("./run-data-migrations.mjs");
 } else {
   console.log(`Skipping production migrations for ${process.env.VERCEL_ENV ?? "local"} build.`);
 }

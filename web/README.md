@@ -33,6 +33,8 @@ least 8 characters, while the session secret must be at least 32 characters.
 
 Production deployments apply pending numbered SQL migrations before the Next.js build. Preview and local builds explicitly skip migrations. Applied filenames are recorded in `kairo_schema_migrations`, so subsequent deployments do not replay completed migrations.
 
+Versioned one-time data migrations run after the schema is current. `001_health_v1_features_and_factors` rebuilds the derived `health-v1` feature/profile layer and trains walk-forward factors without modifying the raw ledger. Its status is recorded in `kairo_data_migrations`; a failed build can retry it, while a completed migration is skipped permanently.
+
 1. Push this repository to GitHub and import it as a Vercel project.
 2. In the Vercel project, install the Neon integration and connect a database
    in a region near `sin1`. The integration supplies `DATABASE_URL`.
