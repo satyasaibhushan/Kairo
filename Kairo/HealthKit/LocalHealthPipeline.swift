@@ -619,11 +619,31 @@ final class HealthIncrementalCollector {
             numericValue = workout.duration
             unit = "s"
             metadata["workoutActivityType"] = String(workout.workoutActivityType.rawValue)
+            if let activeEnergyType = HKQuantityType.quantityType(
+                forIdentifier: .activeEnergyBurned
+            ), let energy = workout.statistics(for: activeEnergyType)?.sumQuantity() {
+                metadata["totalEnergyKilocalories"] = String(
+                    energy.doubleValue(for: .kilocalorie())
+                )
+            }
+            if let distance = workout.totalDistance {
+                metadata["totalDistanceMeters"] = String(
+                    distance.doubleValue(for: .meter())
+                )
+            }
         } else if let state = sample as? HKStateOfMind {
             numericValue = state.valence
             unit = "valence"
             metadata["kind"] = String(state.kind.rawValue)
             metadata["valenceClassification"] = String(state.valenceClassification.rawValue)
+            metadata["labels"] = state.labels
+                .map { String($0.rawValue) }
+                .sorted()
+                .joined(separator: ",")
+            metadata["associations"] = state.associations
+                .map { String($0.rawValue) }
+                .sorted()
+                .joined(separator: ",")
         } else if let assessment = sample as? HKScoredAssessment {
             numericValue = Double(assessment.score)
             unit = "score"

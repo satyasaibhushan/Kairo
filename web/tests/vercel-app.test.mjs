@@ -63,3 +63,55 @@ test("contains the complete Vercel deployment handoff", async () => {
   await access(new URL("../public/og.png", import.meta.url));
   await access(root);
 });
+
+test("defines the rebuildable health intelligence layer", async () => {
+  const [migration, migrateScript, featureBuilder, factorTrainer, packageJson] = await Promise.all([
+    readFile(new URL("../db/002_health_intelligence.sql", import.meta.url), "utf8"),
+    readFile(new URL("../scripts/migrate.mjs", import.meta.url), "utf8"),
+    readFile(new URL("../scripts/rebuild-health-features.mjs", import.meta.url), "utf8"),
+    readFile(new URL("../scripts/train-health-factors.mjs", import.meta.url), "utf8"),
+    readFile(new URL("../package.json", import.meta.url), "utf8"),
+  ]);
+
+  for (const relation of [
+    "health_current_observations",
+    "health_signal_definitions",
+    "health_feature_runs",
+    "health_daily_features",
+    "health_daily_profiles",
+    "health_factor_scores",
+    "health_insights",
+  ]) {
+    assert.match(migration, new RegExp(relation));
+  }
+  assert.match(migrateScript, /readdir\(migrationsDirectory\)/);
+  assert.match(featureBuilder, /sourceSelection', 'greatest_specific_stage_coverage'/);
+  assert.match(featureBuilder, /leakageBoundary', 'strictly_before_feature_date'/);
+  assert.match(factorTrainer, /expanding-window walk-forward/);
+  assert.match(factorTrainer, /baselineMeanAbsoluteError/);
+  assert.match(packageJson, /"features:rebuild"/);
+  assert.match(packageJson, /"factors:train"/);
+});
+
+test("keeps assistant health access bounded and owner authenticated", async () => {
+  const routes = await Promise.all([
+    "day",
+    "trend",
+    "context",
+    "catalog",
+  ].map((route) => readFile(
+    new URL(`../app/api/health/intelligence/${route}/route.ts`, import.meta.url),
+    "utf8",
+  )));
+  for (const route of routes) {
+    assert.match(route, /await getOwner\(\)/);
+    assert.match(route, /export async function GET/);
+    assert.doesNotMatch(route, /export async function (POST|PUT|PATCH|DELETE)/);
+  }
+
+  const data = await readFile(new URL("../app/health/intelligence/data.ts", import.meta.url), "utf8");
+  assert.match(data, /Factor scores are predictive associations/);
+  assert.match(data, /Missing data means unknown, not zero/);
+  assert.match(data, /LIMIT 12/);
+  assert.match(data, /LIMIT 10/);
+});

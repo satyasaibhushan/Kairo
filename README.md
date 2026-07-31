@@ -97,6 +97,17 @@ npm test
 npm run lint
 ```
 
-## Next milestone
+## Health intelligence foundation
 
-Use the complete ledger to compute daily features and learn which signals predict self-reported mood for this person. Medication and clinical-record sources remain separate explicit opt-ins because Apple gives them additional privacy and authorization semantics.
+Kairo now keeps the raw HealthKit ledger separate from a rebuildable intelligence layer: canonical signal definitions, wake-day sleep episodes, personal-day features, trailing baselines, compact daily profiles, learned-factor storage, and owner-authenticated AI context APIs. The model and safety rules are documented in [`docs/intelligence-architecture.md`](docs/intelligence-architecture.md), with feature definitions in [`docs/health-feature-catalog.md`](docs/health-feature-catalog.md).
+
+Build or rebuild derived health data without resyncing the raw ledger:
+
+```sh
+cd web
+npm run db:migrate
+npm run features:rebuild
+npm run factors:train
+```
+
+The next runtime step is an incremental post-ingest rebuild for affected personal days, followed by temporally validated factor training once Kairo has enough State of Mind labels. Medication and clinical-record sources remain separate explicit opt-ins because Apple gives them additional privacy and authorization semantics.

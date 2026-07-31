@@ -12,6 +12,7 @@ device-authenticated ingestion endpoint used by the Kairo iPhone app.
 - bearer-token authentication for iPhone uploads
 - signed, HTTP-only owner sessions for the health dashboard
 - idempotent batches and HealthKit sample upserts
+- versioned daily health features and compact owner-authenticated AI context APIs
 
 ## Local setup
 
@@ -75,6 +76,25 @@ The browser receives static HTML for `/`, `/login`, and `/health`. Login and
 health data load through small serverless API calls after the page is already
 interactive. `GET /api/health/summary` still verifies the signed owner session
 before returning any private data.
+
+## Build the intelligence layer
+
+The raw ledger remains immutable and replayable. Migrations add a current-observation view, canonical signal catalog, daily features and profiles, factor scores, and evidence-backed insights. Rebuilds replace only derived rows for the requested range and calculation version.
+
+```bash
+npm run db:migrate
+npm run features:rebuild
+npm run factors:train
+```
+
+Optional rebuild arguments are `--owner`, `--timezone`, `--from`, and `--through`. The read-only owner endpoints are:
+
+- `GET /api/health/intelligence/day?date=YYYY-MM-DD`
+- `GET /api/health/intelligence/trend?feature=<key>&from=YYYY-MM-DD&through=YYYY-MM-DD`
+- `GET /api/health/intelligence/context?date=YYYY-MM-DD&days=28`
+- `GET /api/health/intelligence/catalog`
+
+These are the bounded evidence surfaces intended for the future assistant. They do not expose arbitrary SQL or unrestricted raw HealthKit data.
 
 ## Validation
 

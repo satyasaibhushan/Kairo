@@ -12,6 +12,8 @@
     "test": "npm run build && node --test tests/*.test.mjs",
     "lint": "eslint . --ignore-pattern .next --ignore-pattern dist --ignore-pattern .vinext --ignore-pattern .wrangler",
     "db:migrate": "node scripts/migrate.mjs",
+    "features:rebuild": "node scripts/rebuild-health-features.mjs",
+    "factors:train": "node scripts/train-health-factors.mjs",
     "pairing-code": "node scripts/pairing-code.mjs"
   },
   "dependencies": {
