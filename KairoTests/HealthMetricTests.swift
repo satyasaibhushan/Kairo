@@ -88,6 +88,13 @@ final class HealthMetricTests: XCTestCase {
         XCTAssertEqual(configuration.siteAccessToken, payload["siteAccessToken"])
     }
 
+    func testUploadingStatusReportsAcknowledgedProgress() {
+        let status = HealthSyncStatus.uploading(sent: 250, total: 1_000)
+
+        XCTAssertEqual(status.label, "UPLOADING 25%")
+        XCTAssertEqual(status.detail, "250 of 1,000 changes acknowledged.")
+    }
+
     private func makeChange(
         sampleID: UUID,
         operation: HealthChangeOperation

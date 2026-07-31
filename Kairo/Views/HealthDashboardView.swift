@@ -316,6 +316,13 @@ struct HealthDashboardView: View {
                             .foregroundStyle(.orange)
                     }
 
+                    if isPairing {
+                        Text(healthStore.syncStatus.detail)
+                            .font(.caption.monospacedDigit())
+                            .foregroundStyle(KairoPalette.mint)
+                            .contentTransition(.numericText())
+                    }
+
                     Button {
                         isPairing = true
                         pairingError = nil

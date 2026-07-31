@@ -97,9 +97,13 @@ final class HealthStore: ObservableObject {
             syncStatus = .notConfigured
             return
         }
-        syncStatus = .uploading(sent: 0)
+        let total = collector.queuedChangeCount
+        syncStatus = .uploading(sent: 0, total: total)
         do {
-            let result = try await uploadClient.uploadAll(from: collector)
+            let result = try await uploadClient.uploadAll(from: collector) { [weak self] progress in
+                self?.collectionStatus.queuedChanges = progress.remaining
+                self?.syncStatus = .uploading(sent: progress.sent, total: total)
+            }
             collectionStatus.queuedChanges = result.remaining
             syncStatus = .synced(date: Date(), sent: result.sent)
         } catch {

@@ -53,7 +53,10 @@ final class HealthUploadClient {
         self.configurationStore = configurationStore
     }
 
-    func uploadAll(from collector: HealthIncrementalCollector) async throws -> HealthUploadResult {
+    func uploadAll(
+        from collector: HealthIncrementalCollector,
+        progress: (HealthUploadResult) -> Void = { _ in }
+    ) async throws -> HealthUploadResult {
         guard let configuration = try configurationStore.load() else {
             return HealthUploadResult(sent: 0, remaining: collector.queuedChangeCount)
         }
@@ -80,6 +83,10 @@ final class HealthUploadClient {
             }
             try collector.acknowledgeUploadedChanges(ids: acknowledgedIDs)
             sent += changes.count
+            progress(HealthUploadResult(
+                sent: sent,
+                remaining: collector.queuedChangeCount
+            ))
         }
 
         return HealthUploadResult(sent: sent, remaining: collector.queuedChangeCount)
@@ -90,6 +97,7 @@ final class HealthUploadClient {
         configuration: HealthSyncConfiguration
     ) async throws -> UploadAcknowledgement {
         var request = URLRequest(url: configuration.endpoint)
+        request.timeoutInterval = 20
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "content-type")
         request.setValue("Bearer \(configuration.ingestToken)", forHTTPHeaderField: "authorization")
