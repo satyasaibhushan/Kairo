@@ -65,9 +65,10 @@ test("contains the complete Vercel deployment handoff", async () => {
 });
 
 test("defines the rebuildable health intelligence layer", async () => {
-  const [migration, migrateScript, featureBuilder, factorTrainer, packageJson] = await Promise.all([
+  const [migration, migrateScript, buildScript, featureBuilder, factorTrainer, packageJson] = await Promise.all([
     readFile(new URL("../db/002_health_intelligence.sql", import.meta.url), "utf8"),
     readFile(new URL("../scripts/migrate.mjs", import.meta.url), "utf8"),
+    readFile(new URL("../scripts/build.mjs", import.meta.url), "utf8"),
     readFile(new URL("../scripts/rebuild-health-features.mjs", import.meta.url), "utf8"),
     readFile(new URL("../scripts/train-health-factors.mjs", import.meta.url), "utf8"),
     readFile(new URL("../package.json", import.meta.url), "utf8"),
@@ -85,6 +86,9 @@ test("defines the rebuildable health intelligence layer", async () => {
     assert.match(migration, new RegExp(relation));
   }
   assert.match(migrateScript, /readdir\(migrationsDirectory\)/);
+  assert.match(migrateScript, /kairo_schema_migrations/);
+  assert.match(buildScript, /VERCEL_ENV === "production"/);
+  assert.match(buildScript, /await import\("\.\/migrate\.mjs"\)/);
   assert.match(featureBuilder, /sourceSelection', 'greatest_specific_stage_coverage'/);
   assert.match(featureBuilder, /leakageBoundary', 'strictly_before_feature_date'/);
   assert.match(factorTrainer, /expanding-window walk-forward/);

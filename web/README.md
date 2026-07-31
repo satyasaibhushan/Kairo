@@ -31,6 +31,8 @@ least 8 characters, while the session secret must be at least 32 characters.
 
 ## Deploy to Vercel
 
+Production deployments apply pending numbered SQL migrations before the Next.js build. Preview and local builds explicitly skip migrations. Applied filenames are recorded in `kairo_schema_migrations`, so subsequent deployments do not replay completed migrations.
+
 1. Push this repository to GitHub and import it as a Vercel project.
 2. In the Vercel project, install the Neon integration and connect a database
    in a region near `sin1`. The integration supplies `DATABASE_URL`.
