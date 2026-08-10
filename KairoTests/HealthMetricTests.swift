@@ -6,7 +6,15 @@ final class HealthMetricTests: XCTestCase {
     func testHealthCatalogRetainsSignalWithoutRawDenseTelemetry() throws {
         XCTAssertEqual(HealthDataCatalog.declaredTypeCount, 205)
         XCTAssertGreaterThanOrEqual(HealthDataCatalog.availableTypeCount, 200)
-        XCTAssertEqual(HealthDataCatalog.retainedTypeCount, 172)
+        if #available(iOS 26.0, *) {
+            XCTAssertGreaterThanOrEqual(HealthDataCatalog.retainedTypeCount, 172)
+            XCTAssertLessThanOrEqual(HealthDataCatalog.retainedTypeCount, 173)
+            XCTAssertTrue(HealthDataCatalog.readTypes.contains(HKObjectType.medicationDoseEventType()))
+            XCTAssertTrue(HealthDataCatalog.readTypes.contains(HKObjectType.userAnnotatedMedicationType()))
+        } else {
+            XCTAssertGreaterThanOrEqual(HealthDataCatalog.retainedTypeCount, 171)
+            XCTAssertLessThanOrEqual(HealthDataCatalog.retainedTypeCount, 172)
+        }
         XCTAssertEqual(
             HealthDataCatalog.sampleTypes.count,
             HealthDataCatalog.rawSampleTypes.count

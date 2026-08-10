@@ -67,6 +67,10 @@ enum HealthDataCatalog {
         for identifier in scoredAssessmentIdentifiers {
             types.insert(HKScoredAssessmentType(identifier))
         }
+        if #available(iOS 26.0, *) {
+            types.insert(HKObjectType.medicationDoseEventType())
+            types.insert(HKObjectType.userAnnotatedMedicationType())
+        }
         return types
     }
 

@@ -261,6 +261,7 @@ final class HealthStore: ObservableObject {
         HKCategoryTypeIdentifier.sleepAnalysis.rawValue,
         HKObjectType.workoutType().identifier,
         HKObjectType.stateOfMindType().identifier,
+        "HKMedicationDoseEventTypeIdentifierMedicationDoseEvent",
     ]
 
     private static var observerRegistrations: [(type: HKSampleType, frequency: HKUpdateFrequency)] {

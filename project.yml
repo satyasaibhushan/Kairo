@@ -31,6 +31,9 @@ targets:
         CFBundleDisplayName: Kairo
         LSRequiresIPhoneOS: true
         NSHealthShareUsageDescription: Kairo reads the health signals you select to show your personal trends and discover which factors align with your mood.
+        NSAppleMusicUsageDescription: Kairo reads recently played music to add listening context to your private daily profile.
+        NSLocationAlwaysAndWhenInUseUsageDescription: Kairo uses coarse visits to calculate routines and commute context without storing a continuous location trail.
+        NSLocationWhenInUseUsageDescription: Kairo uses a coarse location snapshot to attach local environmental context.
         UILaunchStoryboardName: LaunchScreen
         UIRequiresFullScreen: true
         UISupportedInterfaceOrientations:
@@ -40,6 +43,8 @@ targets:
       properties:
         com.apple.developer.healthkit: true
         com.apple.developer.healthkit.background-delivery: true
+        com.apple.developer.family-controls: true
+        com.apple.developer.family-controls.app-and-website-usage: true
     settings:
       base:
         DEVELOPMENT_TEAM: NPJKKT52N4

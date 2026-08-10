@@ -6,5 +6,9 @@
 	<true/>
 	<key>com.apple.developer.healthkit.background-delivery</key>
 	<true/>
+	<key>com.apple.developer.family-controls</key>
+	<true/>
+	<key>com.apple.developer.family-controls.app-and-website-usage</key>
+	<true/>
 </dict>
 </plist>

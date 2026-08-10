@@ -2,6 +2,7 @@ import SwiftUI
 
 struct HealthDashboardView: View {
     @EnvironmentObject private var healthStore: HealthStore
+    @EnvironmentObject private var contextStore: ContextStore
     @Environment(\.scenePhase) private var scenePhase
     @State private var isShowingPairing = false
     @State private var pairingCode = ""
@@ -21,6 +22,7 @@ struct HealthDashboardView: View {
                 VStack(alignment: .leading, spacing: 28) {
                     header
                     connectionCard
+                    contextSourcesCard
 
                     if healthStore.authorizationState == .requested {
                         readings
@@ -34,16 +36,119 @@ struct HealthDashboardView: View {
                 .padding(.vertical, 24)
             }
             .refreshable {
-                await healthStore.refresh()
+                async let health: Void = healthStore.refresh()
+                async let context: Void = contextStore.refresh()
+                _ = await (health, context)
             }
         }
         .preferredColorScheme(.dark)
         .onChange(of: scenePhase) { _, phase in
             guard phase == .active else { return }
             Task { await healthStore.refresh() }
+            Task { await contextStore.refresh() }
         }
         .sheet(isPresented: $isShowingPairing) {
             pairingSheet
+        }
+    }
+
+    private var contextSourcesCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                Label("iPhone context", systemImage: "circle.hexagongrid")
+                    .font(.footnote.weight(.semibold))
+                Spacer()
+                if contextStore.isRefreshing {
+                    ProgressView().tint(KairoPalette.mint)
+                } else {
+                    Text("\(contextStore.queuedObservations) QUEUED")
+                        .font(.caption2.monospaced().weight(.bold))
+                        .foregroundStyle(KairoPalette.tertiaryText)
+                }
+            }
+
+            Text(contextStore.statusMessage)
+                .font(.caption)
+                .foregroundStyle(KairoPalette.secondaryText)
+                .fixedSize(horizontal: false, vertical: true)
+
+            sourceRow(
+                title: "Screen Time",
+                detail: "Duration, pickups, notifications and session shape",
+                isEnabled: contextStore.screenTimeAuthorized
+            ) {
+                Task { await contextStore.requestScreenTimeAuthorization() }
+            }
+
+            sourceRow(
+                title: "Location visits",
+                detail: "Coarse ~1 km cells for routines, commute and weather",
+                isEnabled: contextStore.locationAuthorized
+            ) {
+                contextStore.requestLocationAuthorization()
+            }
+
+            sourceRow(
+                title: "Apple Music",
+                detail: "Recently played songs, duration, artist and genre",
+                isEnabled: contextStore.musicAuthorized
+            ) {
+                Task { await contextStore.requestMusicAuthorization() }
+            }
+
+            if contextStore.screenTimeAuthorized
+                || contextStore.locationAuthorized
+                || contextStore.musicAuthorized {
+                Button {
+                    Task { await contextStore.refresh() }
+                } label: {
+                    HStack {
+                        Text("Refresh context")
+                        Spacer()
+                        Image(systemName: "arrow.triangle.2.circlepath")
+                    }
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(KairoPalette.background)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 11)
+                    .background(KairoPalette.mint)
+                    .clipShape(RoundedRectangle(cornerRadius: 11))
+                }
+                .disabled(contextStore.isRefreshing)
+            }
+        }
+        .padding(16)
+        .background(KairoPalette.panel)
+        .overlay {
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(KairoPalette.panelBorder, lineWidth: 1)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+    }
+
+    private func sourceRow(
+        title: String,
+        detail: String,
+        isEnabled: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                Text(detail)
+                    .font(.caption2)
+                    .foregroundStyle(KairoPalette.tertiaryText)
+            }
+            Spacer()
+            Button(isEnabled ? "ON" : "ENABLE", action: action)
+                .font(.caption2.monospaced().weight(.bold))
+                .foregroundStyle(isEnabled ? KairoPalette.mint : KairoPalette.background)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 7)
+                .background(isEnabled ? KairoPalette.mint.opacity(0.12) : KairoPalette.mint)
+                .clipShape(Capsule())
+                .disabled(isEnabled)
         }
     }
 

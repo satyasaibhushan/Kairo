@@ -13,6 +13,7 @@ device-authenticated ingestion endpoint used by the Kairo iPhone app.
 - signed, HTTP-only owner sessions for the health dashboard
 - idempotent batches and HealthKit sample upserts
 - versioned daily health features and compact owner-authenticated AI context APIs
+- a separate context ledger for Screen Time, coarse visits, music, weather, and calendar
 
 ## Local setup
 
@@ -40,7 +41,9 @@ Versioned one-time data migrations run after the schema is current. `001_health_
    in a region near `sin1`. The integration supplies `DATABASE_URL`.
 3. Add these Production, Preview, and Development environment variables:
    `KAIRO_INGEST_TOKEN`, `KAIRO_OWNER_ID`, `KAIRO_OWNER_NAME`,
-   `KAIRO_DASHBOARD_PASSWORD`, and `KAIRO_SESSION_SECRET`.
+   `KAIRO_DASHBOARD_PASSWORD`, `KAIRO_SESSION_SECRET`, `CRON_SECRET`,
+   `GOOGLE_CALENDAR_CLIENT_ID`, `GOOGLE_CALENDAR_CLIENT_SECRET`, and
+   `GOOGLE_CALENDAR_REFRESH_TOKEN`.
 4. Pull the Vercel environment locally and initialize the database:
 
    ```bash
@@ -99,6 +102,17 @@ Optional rebuild arguments are `--owner`, `--timezone`, `--from`, and `--through
 - `GET /api/health/intelligence/catalog`
 
 These are the bounded evidence surfaces intended for the future assistant. They do not expose arbitrary SQL or unrestricted raw HealthKit data.
+
+## Context ingestion and Calendar sync
+
+`POST /api/context/observations` uses the same bearer token as HealthKit ingestion.
+Accepted Screen Time, location, and music observations are materialized after the
+response; a fresh coarse location also triggers best-effort Open-Meteo enrichment.
+
+`POST /api/context/google-calendar/sync` requires the signed owner session. The same
+route accepts Vercel’s secured daily `GET`, whose bearer value comes from
+`CRON_SECRET`. Google Calendar uses incremental sync tokens and refreshes the last
+120 days only when no usable token exists.
 
 ## Validation
 

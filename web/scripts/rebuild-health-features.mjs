@@ -1,117 +1,146 @@
 import { randomUUID } from "node:crypto";
+import { pathToFileURL } from "node:url";
 import { neon } from "@neondatabase/serverless";
 
-const databaseUrl = process.env.DATABASE_URL;
-if (!databaseUrl) throw new Error("Set DATABASE_URL before rebuilding health features");
+let sql;
+let rebuildQueue = Promise.resolve();
 
-const argumentsByName = parseArguments(process.argv.slice(2));
-const ownerId = argumentsByName.owner ?? process.env.KAIRO_OWNER_ID ?? "primary";
-const timeZone = argumentsByName.timezone ?? process.env.KAIRO_TIME_ZONE ?? "Asia/Kolkata";
-const featureVersion = "health-v1";
-const chunkDays = validatePositiveInteger(
-  argumentsByName["chunk-days"] ?? process.env.KAIRO_BACKFILL_CHUNK_DAYS ?? "180",
-  "chunk-days",
-);
-const sql = neon(databaseUrl);
+export function rebuildHealthFeatures(options) {
+  const run = rebuildQueue.then(() => runHealthFeatureRebuild(options));
+  rebuildQueue = run.catch(() => undefined);
+  return run;
+}
 
-const bounds = await sql.query(
-  `SELECT
-      COALESCE((MIN(start_date) AT TIME ZONE $2)::date, CURRENT_DATE)::text AS "minimumDate",
-      COALESCE((MAX(COALESCE(end_date, start_date)) AT TIME ZONE $2)::date, CURRENT_DATE)::text AS "maximumDate"
-    FROM health_current_observations
-    WHERE owner_id = $1 AND operation = 'upsert'`,
-  [ownerId, timeZone],
-);
-const minimumDate = validateDate(argumentsByName.from ?? bounds[0]?.minimumDate, "from");
-const maximumDate = validateDate(argumentsByName.through ?? bounds[0]?.maximumDate, "through");
-if (minimumDate > maximumDate) throw new Error("--from must not be after --through");
+async function runHealthFeatureRebuild({
+  sqlClient,
+  ownerId = process.env.KAIRO_OWNER_ID ?? "primary",
+  timeZone = process.env.KAIRO_TIME_ZONE ?? "Asia/Kolkata",
+  featureVersion = "health-v1",
+  from,
+  through,
+  chunkDays = validatePositiveInteger(
+    process.env.KAIRO_BACKFILL_CHUNK_DAYS ?? "180",
+    "chunk-days",
+  ),
+}) {
+  sql = sqlClient;
+  const bounds = await sql.query(
+    `SELECT
+        COALESCE((MIN(start_date) AT TIME ZONE $2)::date, CURRENT_DATE)::text AS "minimumDate",
+        COALESCE((MAX(COALESCE(end_date, start_date)) AT TIME ZONE $2)::date, CURRENT_DATE)::text AS "maximumDate"
+      FROM health_current_observations
+      WHERE owner_id = $1 AND operation = 'upsert'`,
+    [ownerId, timeZone],
+  );
+  const minimumDate = validateDate(from ?? bounds[0]?.minimumDate, "from");
+  const maximumDate = validateDate(through ?? bounds[0]?.maximumDate, "through");
+  if (minimumDate > maximumDate) throw new Error("--from must not be after --through");
 
-const runId = randomUUID();
-await sql.query(
-  `INSERT INTO health_owner_settings (owner_id, home_time_zone, feature_version, updated_at)
-   VALUES ($1, $2, $3, now())
-   ON CONFLICT (owner_id) DO UPDATE SET
-     home_time_zone = EXCLUDED.home_time_zone,
-     feature_version = EXCLUDED.feature_version,
-     updated_at = now()`,
-  [ownerId, timeZone, featureVersion],
-);
-await sql.query(
-  `INSERT INTO health_feature_runs (
-     run_id, owner_id, feature_version, requested_from, requested_through,
-     time_zone, status
-   ) VALUES ($1, $2, $3, $4, $5, $6, 'running')`,
-  [runId, ownerId, featureVersion, minimumDate, maximumDate, timeZone],
-);
-
-try {
-  await seedObservedSignalDefinitions({ ownerId });
+  const runId = randomUUID();
   await sql.query(
-    `DELETE FROM health_daily_profiles
-     WHERE owner_id = $1 AND profile_version = $2
-       AND profile_date BETWEEN $3::date AND $4::date`,
-    [ownerId, featureVersion, minimumDate, maximumDate],
+    `INSERT INTO health_owner_settings (owner_id, home_time_zone, feature_version, updated_at)
+     VALUES ($1, $2, $3, now())
+     ON CONFLICT (owner_id) DO UPDATE SET
+       home_time_zone = EXCLUDED.home_time_zone,
+       feature_version = EXCLUDED.feature_version,
+       updated_at = now()`,
+    [ownerId, timeZone, featureVersion],
   );
   await sql.query(
-    `DELETE FROM health_daily_features
-     WHERE owner_id = $1 AND feature_version = $2
-       AND feature_date BETWEEN $3::date AND $4::date`,
-    [ownerId, featureVersion, minimumDate, maximumDate],
+    `INSERT INTO health_feature_runs (
+       run_id, owner_id, feature_version, requested_from, requested_through,
+       time_zone, status
+     ) VALUES ($1, $2, $3, $4, $5, $6, 'running')`,
+    [runId, ownerId, featureVersion, minimumDate, maximumDate, timeZone],
   );
 
-  const chunks = partitionDateRange(minimumDate, maximumDate, chunkDays);
-  console.log(
-    `Rebuilding ${featureVersion} in ${chunks.length.toLocaleString("en-IN")} date chunks of at most ${chunkDays} days.`,
-  );
-  for (const [index, chunk] of chunks.entries()) {
-    console.log(
-      `Starting feature chunk ${index + 1}/${chunks.length}: ${chunk.from} through ${chunk.through}.`,
+  try {
+    await seedObservedSignalDefinitions({ ownerId });
+    await sql.query(
+      `DELETE FROM health_daily_profiles
+       WHERE owner_id = $1 AND profile_version = $2
+         AND profile_date BETWEEN $3::date AND $4::date`,
+      [ownerId, featureVersion, minimumDate, maximumDate],
     );
-    const parameters = {
-      ownerId,
-      timeZone,
-      minimumDate: chunk.from,
-      maximumDate: chunk.through,
-      featureVersion,
-    };
-    await rebuildNumericFeatures(parameters);
-    await rebuildSleepFeatures(parameters);
-    await rebuildStandFeatures(parameters);
-    await rebuildWorkoutFeatures(parameters);
-    await rebuildCategoryFeatures(parameters);
-    await rebuildRollingFeatures(parameters);
-    await rebuildProfiles(parameters);
-    console.log(
-      `Completed feature chunk ${index + 1}/${chunks.length}: ${chunk.from} through ${chunk.through}.`,
+    await sql.query(
+      `DELETE FROM health_daily_features
+       WHERE owner_id = $1 AND feature_version = $2
+         AND feature_date BETWEEN $3::date AND $4::date`,
+      [ownerId, featureVersion, minimumDate, maximumDate],
     );
+
+    const chunks = partitionDateRange(minimumDate, maximumDate, chunkDays);
+    console.log(
+      `Rebuilding ${featureVersion} in ${chunks.length.toLocaleString("en-IN")} date chunks of at most ${chunkDays} days.`,
+    );
+    for (const [index, chunk] of chunks.entries()) {
+      console.log(
+        `Starting feature chunk ${index + 1}/${chunks.length}: ${chunk.from} through ${chunk.through}.`,
+      );
+      const parameters = {
+        ownerId,
+        timeZone,
+        minimumDate: chunk.from,
+        maximumDate: chunk.through,
+        featureVersion,
+      };
+      await rebuildNumericFeatures(parameters);
+      await rebuildSleepFeatures(parameters);
+      await rebuildStandFeatures(parameters);
+      await rebuildWorkoutFeatures(parameters);
+      await rebuildCategoryFeatures(parameters);
+      await rebuildRollingFeatures(parameters);
+      await rebuildProfiles(parameters);
+      console.log(
+        `Completed feature chunk ${index + 1}/${chunks.length}: ${chunk.from} through ${chunk.through}.`,
+      );
+    }
+
+    const countRows = await sql.query(
+      `SELECT COUNT(*)::int AS value
+       FROM health_daily_features
+       WHERE owner_id = $1 AND feature_version = $2
+         AND feature_date BETWEEN $3::date AND $4::date`,
+      [ownerId, featureVersion, minimumDate, maximumDate],
+    );
+    const featureCount = Number(countRows[0]?.value ?? 0);
+    await sql.query(
+      `UPDATE health_feature_runs
+       SET status = 'completed', feature_count = $2, completed_at = now()
+       WHERE run_id = $1`,
+      [runId, featureCount],
+    );
+    console.log(
+      `Built ${featureCount.toLocaleString("en-IN")} ${featureVersion} features for ${minimumDate} through ${maximumDate}.`,
+    );
+    return { runId, featureCount, minimumDate, maximumDate };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    await sql.query(
+      `UPDATE health_feature_runs
+       SET status = 'failed', error_message = $2, completed_at = now()
+       WHERE run_id = $1`,
+      [runId, message.slice(0, 2_000)],
+    );
+    throw error;
   }
+}
 
-  const countRows = await sql.query(
-    `SELECT COUNT(*)::int AS value
-     FROM health_daily_features
-     WHERE owner_id = $1 AND feature_version = $2
-       AND feature_date BETWEEN $3::date AND $4::date`,
-    [ownerId, featureVersion, minimumDate, maximumDate],
-  );
-  const featureCount = Number(countRows[0]?.value ?? 0);
-  await sql.query(
-    `UPDATE health_feature_runs
-     SET status = 'completed', feature_count = $2, completed_at = now()
-     WHERE run_id = $1`,
-    [runId, featureCount],
-  );
-  console.log(
-    `Built ${featureCount.toLocaleString("en-IN")} ${featureVersion} features for ${minimumDate} through ${maximumDate}.`,
-  );
-} catch (error) {
-  const message = error instanceof Error ? error.message : String(error);
-  await sql.query(
-    `UPDATE health_feature_runs
-     SET status = 'failed', error_message = $2, completed_at = now()
-     WHERE run_id = $1`,
-    [runId, message.slice(0, 2_000)],
-  );
-  throw error;
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  const databaseUrl = process.env.DATABASE_URL;
+  if (!databaseUrl) throw new Error("Set DATABASE_URL before rebuilding health features");
+  const argumentsByName = parseArguments(process.argv.slice(2));
+  await rebuildHealthFeatures({
+    sqlClient: neon(databaseUrl),
+    ownerId: argumentsByName.owner ?? process.env.KAIRO_OWNER_ID ?? "primary",
+    timeZone: argumentsByName.timezone ?? process.env.KAIRO_TIME_ZONE ?? "Asia/Kolkata",
+    from: argumentsByName.from,
+    through: argumentsByName.through,
+    chunkDays: validatePositiveInteger(
+      argumentsByName["chunk-days"] ?? process.env.KAIRO_BACKFILL_CHUNK_DAYS ?? "180",
+      "chunk-days",
+    ),
+  });
 }
 
 async function seedObservedSignalDefinitions({ ownerId }) {

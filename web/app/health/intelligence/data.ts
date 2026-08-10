@@ -12,6 +12,7 @@ import type {
 
 type SettingsRow = { homeTimeZone: string; featureVersion: string };
 type FreshnessRow = { lastReceivedAt: string | null; latestEffectiveAt: string | null };
+type ContextProfileRow = { profileDate: string; profile: Record<string, unknown> };
 type ProfileRow = {
   profileDate: string;
   profile: DailyHealthProfile;
@@ -149,7 +150,7 @@ export async function loadAIContext(
   const sql = getDatabase();
   const ownerId = ownerIdentifier();
   const settings = await loadSettings();
-  const [recentMood, insights, freshnessRows] = await Promise.all([
+  const [recentMood, insights, freshnessRows, contextProfileRows, contextFreshnessRows] = await Promise.all([
     sql`SELECT
         (start_date AT TIME ZONE ${settings.homeTimeZone})::date::text AS date,
         AVG(numeric_value) AS valence,
@@ -183,11 +184,30 @@ export async function loadAIContext(
         MAX(COALESCE(end_date, start_date))::text AS "latestEffectiveAt"
       FROM health_current_observations
       WHERE owner_id = ${ownerId}`,
+    sql`SELECT profile_date::text AS "profileDate", profile_json AS profile
+      FROM context_daily_profiles
+      WHERE owner_id = ${ownerId}
+        AND profile_version = 'context-v1'
+        AND profile_date BETWEEN (${day.date}::date - ${lookbackDays}::int) AND ${day.date}::date
+      ORDER BY profile_date`,
+    sql`SELECT
+        MAX(received_at)::text AS "lastReceivedAt",
+        MAX(COALESCE(observed_end, observed_start))::text AS "latestEffectiveAt"
+      FROM context_current_observations
+      WHERE owner_id = ${ownerId}`,
   ]);
   const freshness = (freshnessRows as unknown as FreshnessRow[])[0]
     ?? { lastReceivedAt: null, latestEffectiveAt: null };
   const recentMoodEvidence = recentMood as unknown as Record<string, unknown>[];
   const activeInsights = insights as unknown as Record<string, unknown>[];
+  const contextProfiles = contextProfileRows as unknown as ContextProfileRow[];
+  const contextFreshness = (contextFreshnessRows as unknown as FreshnessRow[])[0]
+    ?? { lastReceivedAt: null, latestEffectiveAt: null };
+  const context = {
+    freshness: contextFreshness,
+    selectedDay: contextProfiles.find((profile) => profile.profileDate === day.date)?.profile ?? null,
+    recentDays: contextProfiles,
+  };
 
   return {
     schema: "kairo.health.ai-context.v1",
@@ -199,14 +219,16 @@ export async function loadAIContext(
       "certainty when data is missing or low quality",
     ],
     day,
+    context,
     recentMood: recentMoodEvidence,
     insights: activeInsights,
-    jarvis: buildJarvisHealthView(day, recentMoodEvidence, activeInsights, freshness),
+    jarvis: buildJarvisHealthView(day, context, recentMoodEvidence, activeInsights, freshness),
   };
 }
 
 function buildJarvisHealthView(
   day: IntelligenceEvidence,
+  context: Record<string, unknown>,
   recentMood: readonly Record<string, unknown>[],
   insights: readonly Record<string, unknown>[],
   freshness: Record<string, unknown>,
@@ -238,6 +260,7 @@ function buildJarvisHealthView(
       freshness,
       coverage: day.domainCoverage,
       notablePersonalDeviations: deviations,
+      context,
     },
     patterns,
     memory: {
