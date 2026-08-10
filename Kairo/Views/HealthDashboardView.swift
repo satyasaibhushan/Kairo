@@ -75,7 +75,7 @@ struct HealthDashboardView: View {
             sourceRow(
                 title: "Screen Time",
                 detail: contextStore.screenTimeDataUnavailable
-                    ? "Detailed export is restricted by the current iOS profile"
+                    ? "Tap Retry to request detailed Screen Time access"
                     : "Duration, pickups, notifications and session shape",
                 isEnabled: contextStore.screenTimeAuthorized,
                 isUnavailable: contextStore.screenTimeDataUnavailable
@@ -138,7 +138,7 @@ struct HealthDashboardView: View {
         isUnavailable: Bool = false,
         action: @escaping () -> Void
     ) -> some View {
-        let buttonTitle = isUnavailable ? "LIMITED" : (isEnabled ? "ON" : "ENABLE")
+        let buttonTitle = isUnavailable ? "RETRY" : (isEnabled ? "ON" : "ENABLE")
         let buttonForeground = isEnabled
             ? KairoPalette.mint
             : (isUnavailable ? KairoPalette.tertiaryText : KairoPalette.background)
@@ -162,7 +162,7 @@ struct HealthDashboardView: View {
                 .padding(.vertical, 7)
                 .background(buttonBackground)
                 .clipShape(Capsule())
-                .disabled(isEnabled || isUnavailable)
+                .disabled(isEnabled)
         }
     }
 

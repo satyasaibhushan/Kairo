@@ -75,6 +75,11 @@ final class ContextStore: ObservableObject {
         locationCollector.authorizationStatus == .authorizedWhenInUse
     }
 
+    static func shouldResetScreenTimeAuthorization(status: AuthorizationStatus) -> Bool {
+        guard #available(iOS 26.4, *) else { return false }
+        return status == .approved
+    }
+
     func prepare() async {
         if locationAuthorized || locationAuthorizationLimited {
             locationCollector.start()
@@ -85,14 +90,32 @@ final class ContextStore: ObservableObject {
 
     func requestScreenTimeAuthorization() async {
         do {
+            if Self.shouldResetScreenTimeAuthorization(
+                status: AuthorizationCenter.shared.authorizationStatus
+            ) {
+                statusMessage = "Resetting basic Screen Time permission…"
+                try await revokeScreenTimeAuthorization()
+            }
+
             try await AuthorizationCenter.shared.requestAuthorization(for: .individual)
+            objectWillChange.send()
             if screenTimeAuthorized {
                 await refresh()
             } else {
-                statusMessage = "Basic Screen Time permission is active, but this region or provisioning profile cannot export detailed usage data."
+                statusMessage = "Screen Time permission remains limited. Detailed data access "
+                    + "requires an eligible Apple development profile or an EU device and Apple Account."
             }
         } catch {
             statusMessage = error.localizedDescription
+        }
+    }
+
+    private func revokeScreenTimeAuthorization() async throws {
+        try await withCheckedThrowingContinuation {
+            (continuation: CheckedContinuation<Void, Error>) in
+            AuthorizationCenter.shared.revokeAuthorization { result in
+                continuation.resume(with: result)
+            }
         }
     }
 

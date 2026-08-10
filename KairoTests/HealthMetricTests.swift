@@ -47,6 +47,15 @@ final class HealthMetricTests: XCTestCase {
         XCTAssertEqual(MusicContextCollector.requestLimit(0), 1)
     }
 
+    @MainActor
+    func testBasicScreenTimeApprovalRequiresReauthorizationForDataAccess() {
+        guard #available(iOS 26.4, *) else { return }
+
+        XCTAssertTrue(ContextStore.shouldResetScreenTimeAuthorization(status: .approved))
+        XCTAssertFalse(ContextStore.shouldResetScreenTimeAuthorization(status: .approvedWithDataAccess))
+        XCTAssertFalse(ContextStore.shouldResetScreenTimeAuthorization(status: .notDetermined))
+    }
+
     func testUnavailableReadingPreservesMetricIdentity() {
         let reading = HealthReading.unavailable(.sleep)
 
