@@ -74,8 +74,11 @@ struct HealthDashboardView: View {
 
             sourceRow(
                 title: "Screen Time",
-                detail: "Duration, pickups, notifications and session shape",
-                isEnabled: contextStore.screenTimeAuthorized
+                detail: contextStore.screenTimeDataUnavailable
+                    ? "Detailed export is restricted by the current iOS profile"
+                    : "Duration, pickups, notifications and session shape",
+                isEnabled: contextStore.screenTimeAuthorized,
+                isUnavailable: contextStore.screenTimeDataUnavailable
             ) {
                 Task { await contextStore.requestScreenTimeAuthorization() }
             }
@@ -132,9 +135,18 @@ struct HealthDashboardView: View {
         title: String,
         detail: String,
         isEnabled: Bool,
+        isUnavailable: Bool = false,
         action: @escaping () -> Void
     ) -> some View {
-        HStack(spacing: 12) {
+        let buttonTitle = isUnavailable ? "LIMITED" : (isEnabled ? "ON" : "ENABLE")
+        let buttonForeground = isEnabled
+            ? KairoPalette.mint
+            : (isUnavailable ? KairoPalette.tertiaryText : KairoPalette.background)
+        let buttonBackground = isEnabled || isUnavailable
+            ? KairoPalette.mint.opacity(0.12)
+            : KairoPalette.mint
+
+        return HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 3) {
                 Text(title)
                     .font(.subheadline.weight(.semibold))
@@ -143,14 +155,14 @@ struct HealthDashboardView: View {
                     .foregroundStyle(KairoPalette.tertiaryText)
             }
             Spacer()
-            Button(isEnabled ? "ON" : "ENABLE", action: action)
+            Button(buttonTitle, action: action)
                 .font(.caption2.monospaced().weight(.bold))
-                .foregroundStyle(isEnabled ? KairoPalette.mint : KairoPalette.background)
+                .foregroundStyle(buttonForeground)
                 .padding(.horizontal, 10)
                 .padding(.vertical, 7)
-                .background(isEnabled ? KairoPalette.mint.opacity(0.12) : KairoPalette.mint)
+                .background(buttonBackground)
                 .clipShape(Capsule())
-                .disabled(isEnabled)
+                .disabled(isEnabled || isUnavailable)
         }
     }
 

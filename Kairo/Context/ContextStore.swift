@@ -53,6 +53,17 @@ final class ContextStore: ObservableObject {
         return status == .approvedWithDataAccess
     }
 
+    var screenTimePermissionGranted: Bool {
+        let status = AuthorizationCenter.shared.authorizationStatus
+        if status == .approved { return true }
+        guard #available(iOS 26.4, *) else { return false }
+        return status == .approvedWithDataAccess
+    }
+
+    var screenTimeDataUnavailable: Bool {
+        screenTimePermissionGranted && !screenTimeAuthorized
+    }
+
     var musicAuthorized: Bool { MusicAuthorization.currentStatus == .authorized }
 
     var locationAuthorized: Bool {
@@ -77,7 +88,7 @@ final class ContextStore: ObservableObject {
             if screenTimeAuthorized {
                 await refresh()
             } else {
-                statusMessage = "Basic Screen Time permission is active, but detailed data access is unavailable for this device, region or provisioning profile."
+                statusMessage = "Basic Screen Time permission is active, but this region or provisioning profile cannot export detailed usage data."
             }
         } catch {
             statusMessage = error.localizedDescription
