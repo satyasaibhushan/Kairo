@@ -119,6 +119,12 @@ with `/api/context/google-calendar/callback` as its authorized redirect URI, the
 the encryption key with `openssl rand -base64 32`. The authenticated Health dashboard
 then handles Connect, Sync now, and Disconnect without a manual refresh token.
 
+Paired iPhones obtain an Apple Music developer token from
+`GET /api/context/apple-music/developer-token`. Configure `APPLE_MUSIC_TEAM_ID`,
+`APPLE_MUSIC_KEY_ID`, and `APPLE_MUSIC_PRIVATE_KEY_BASE64` using a Media Services key
+associated with a MusicKit-enabled Media ID. The `.p8` key stays in Vercel; the app
+receives only the signed, expiring token.
+
 ## Validation
 
 ```bash

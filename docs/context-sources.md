@@ -41,6 +41,29 @@ MusicKit recently played items contribute title, artist, album, genre, duration,
 play count, and last-played time when Apple supplies them. This is useful listening
 context but is not a complete event history, and Kairo does not infer mood from taste.
 
+For paired devices, Kairo fetches a developer token from the authenticated
+`/api/context/apple-music/developer-token` route. The server signs a 30-day ES256 token;
+the Media Services private key never enters the iPhone app or API response. MusicKit
+continues to obtain and manage the owner-specific Music User Token.
+
+In Apple Developer, register a Media ID with MusicKit enabled, then create a **Media
+Services** key associated with that Media ID. Download its `.p8` file once and configure
+these Vercel environment variables:
+
+```text
+APPLE_MUSIC_TEAM_ID=NPJKKT52N4
+APPLE_MUSIC_KEY_ID=...
+APPLE_MUSIC_PRIVATE_KEY_BASE64=...
+```
+
+Encode the downloaded key without printing it to the terminal history:
+
+```bash
+base64 < AuthKey_KEY_ID.p8 | tr -d '\n'
+```
+
+Paste the result directly into Vercel. Never commit the `.p8` file or its encoded value.
+
 ### Medication
 
 On iOS 26 or later, medication dose events enter the HealthKit ledger with dose,

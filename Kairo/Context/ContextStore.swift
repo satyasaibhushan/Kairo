@@ -2,7 +2,7 @@ import BackgroundTasks
 import CoreLocation
 import FamilyControls
 import Foundation
-import MusicKit
+@preconcurrency import MusicKit
 
 @MainActor
 final class ContextStore: ObservableObject {
@@ -43,6 +43,7 @@ final class ContextStore: ObservableObject {
     )
 
     init() {
+        MusicDataRequest.tokenProvider = KairoMusicTokenProvider()
         queue = try? ProtectedContextQueue()
         queuedObservations = queue?.count ?? 0
     }
@@ -144,7 +145,9 @@ final class ContextStore: ObservableObject {
             await uploadQueuedObservations()
             return !Task.isCancelled
         } catch {
-            statusMessage = error.localizedDescription
+            let details = contextErrorDetails(error)
+            print("Context refresh failed: \(details)")
+            statusMessage = details
             return false
         }
     }
@@ -163,6 +166,28 @@ final class ContextStore: ObservableObject {
             statusMessage = error.localizedDescription
         }
     }
+}
+
+private func contextErrorDetails(_ error: Error) -> String {
+    var messages: [String] = []
+    var pending = [error as NSError]
+    var seen: Set<String> = []
+
+    while let current = pending.first {
+        pending.removeFirst()
+        let identity = "\(current.domain):\(current.code):\(current.localizedDescription)"
+        guard seen.insert(identity).inserted else { continue }
+        messages.append(identity)
+
+        if let underlying = current.userInfo[NSUnderlyingErrorKey] as? NSError {
+            pending.append(underlying)
+        }
+        if let underlying = current.userInfo["NSMultipleUnderlyingErrors"] as? [NSError] {
+            pending.append(contentsOf: underlying)
+        }
+    }
+
+    return messages.joined(separator: " → ")
 }
 
 @MainActor

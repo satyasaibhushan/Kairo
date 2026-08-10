@@ -53,6 +53,9 @@ test("contains the complete Vercel deployment handoff", async () => {
     "KAIRO_PUBLIC_URL",
     "GOOGLE_CALENDAR_REDIRECT_URI",
     "GOOGLE_CALENDAR_TOKEN_ENCRYPTION_KEY",
+    "APPLE_MUSIC_TEAM_ID",
+    "APPLE_MUSIC_KEY_ID",
+    "APPLE_MUSIC_PRIVATE_KEY_BASE64",
   ]) {
     assert.match(environment, new RegExp(name));
   }
@@ -63,6 +66,7 @@ test("contains the complete Vercel deployment handoff", async () => {
   await access(new URL("../app/api/auth/login/route.ts", import.meta.url));
   await access(new URL("../app/api/auth/logout/route.ts", import.meta.url));
   await access(new URL("../app/api/auth/session/route.ts", import.meta.url));
+  await access(new URL("../app/api/context/apple-music/developer-token/route.ts", import.meta.url));
   await access(new URL("../public/og.png", import.meta.url));
   await access(root);
 });

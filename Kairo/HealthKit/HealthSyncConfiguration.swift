@@ -27,10 +27,18 @@ struct HealthSyncConfiguration: Codable, Equatable {
     }
 
     var contextEndpoint: URL {
+        endpoint(replacingPathWith: "/api/context/observations")
+    }
+
+    var appleMusicDeveloperTokenEndpoint: URL {
+        endpoint(replacingPathWith: "/api/context/apple-music/developer-token")
+    }
+
+    private func endpoint(replacingPathWith path: String) -> URL {
         guard var components = URLComponents(url: endpoint, resolvingAgainstBaseURL: false) else {
             return endpoint
         }
-        components.path = "/api/context/observations"
+        components.path = path
         components.query = nil
         components.fragment = nil
         return components.url ?? endpoint

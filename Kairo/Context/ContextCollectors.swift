@@ -147,6 +147,73 @@ enum MusicContextCollector {
     }
 }
 
+final class KairoMusicTokenProvider: MusicUserTokenProvider,
+    MusicDeveloperTokenProvider, @unchecked Sendable {
+    private struct TokenResponse: Decodable {
+        let token: String
+    }
+
+    private struct ServerError: Decodable {
+        let error: String
+    }
+
+    private let session: URLSession
+    private let configurationStore: HealthSyncConfigurationStore
+    private let defaultProvider = DefaultMusicTokenProvider()
+
+    init(
+        session: URLSession = .shared,
+        configurationStore: HealthSyncConfigurationStore = HealthSyncConfigurationStore()
+    ) {
+        self.session = session
+        self.configurationStore = configurationStore
+        super.init()
+    }
+
+    func developerToken(options: MusicTokenRequestOptions) async throws -> String {
+        guard let configuration = try configurationStore.load() else {
+            return try await defaultProvider.developerToken(options: options)
+        }
+
+        var request = URLRequest(url: configuration.appleMusicDeveloperTokenEndpoint)
+        request.timeoutInterval = 20
+        request.setValue(
+            "Bearer \(configuration.ingestToken)",
+            forHTTPHeaderField: "authorization"
+        )
+        request.setValue(
+            "Bearer \(configuration.siteAccessToken)",
+            forHTTPHeaderField: "OAI-Sites-Authorization"
+        )
+        let (data, response) = try await session.data(for: request)
+        guard let response = response as? HTTPURLResponse else {
+            throw KairoMusicTokenError.invalidResponse
+        }
+        guard (200..<300).contains(response.statusCode) else {
+            let message = (try? JSONDecoder().decode(ServerError.self, from: data).error)
+                ?? HTTPURLResponse.localizedString(forStatusCode: response.statusCode)
+            throw KairoMusicTokenError.server(status: response.statusCode, message: message)
+        }
+        let result = try JSONDecoder().decode(TokenResponse.self, from: data)
+        guard !result.token.isEmpty else { throw KairoMusicTokenError.invalidResponse }
+        return result.token
+    }
+}
+
+enum KairoMusicTokenError: LocalizedError {
+    case invalidResponse
+    case server(status: Int, message: String)
+
+    var errorDescription: String? {
+        switch self {
+        case .invalidResponse:
+            "Kairo's Apple Music token service returned an invalid response."
+        case let .server(status, message):
+            "Kairo's Apple Music token service returned \(status): \(message)"
+        }
+    }
+}
+
 @MainActor
 final class LocationVisitCollector: NSObject, @preconcurrency CLLocationManagerDelegate {
     private let manager = CLLocationManager()
