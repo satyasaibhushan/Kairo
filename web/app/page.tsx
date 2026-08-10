@@ -248,15 +248,16 @@ export default function Home() {
       <section className="hero shell" id="top">
         <div className="hero-copy">
           <div className="eyebrow">KAIRO · PRIVATE PERSONAL INTELLIGENCE</div>
-          <h1>
-            Kairo is the system that
+          <h1>Kairo</h1>
+          <p className="hero-title">
+            Private personal intelligence
             <br />
-            <em>notices.</em>
-          </h1>
+            <em>that notices.</em>
+          </p>
           <p className="hero-lede">
-            Kairo is a private personal intelligence system that connects what you planned, where
-            your time went, how your body felt, and what actually changed. It turns consented health,
-            attention and schedule signals into evidence-backed daily context—not surveillance.
+            Kairo connects consented health, attention, schedule, and location signals to create
+            private, evidence-backed daily insights for its user. It helps you understand how your
+            plans, time, body, and routines relate without creating or changing calendar events.
           </p>
           <div className="hero-actions">
             <a className="primary-button" href="#architecture">

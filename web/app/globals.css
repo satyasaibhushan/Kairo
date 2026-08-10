@@ -206,7 +206,8 @@ button {
   background: var(--cyan);
 }
 
-.hero h1 {
+.hero h1,
+.hero-title {
   margin: 26px 0 24px;
   max-width: 740px;
   font-size: clamp(68px, 7.2vw, 112px);
@@ -215,7 +216,18 @@ button {
   line-height: 0.84;
 }
 
-.hero h1 em {
+.hero h1 {
+  margin-bottom: 0;
+  color: var(--cyan);
+  font-family: Georgia, "Times New Roman", serif;
+  font-weight: 400;
+}
+
+.hero-title {
+  margin-top: 8px;
+}
+
+.hero-title em {
   color: var(--cyan);
   font-family: Georgia, "Times New Roman", serif;
   font-weight: 400;
@@ -1737,7 +1749,8 @@ button {
     padding-top: 126px;
   }
 
-  .hero h1 {
+  .hero h1,
+  .hero-title {
     font-size: clamp(58px, 19vw, 84px);
   }
 

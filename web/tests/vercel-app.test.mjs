@@ -74,8 +74,11 @@ test("publishes an OAuth-verifiable Kairo homepage and privacy policy", async ()
     readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
   ]);
 
-  assert.match(layout, /Kairo — Private Personal Intelligence/);
-  assert.match(home, /Kairo is a private personal intelligence system/);
+  assert.match(layout, /const title = "Kairo"/);
+  assert.match(layout, /applicationName: "Kairo"/);
+  assert.match(layout, /siteName: "Kairo"/);
+  assert.match(home, /<h1>Kairo<\/h1>/);
+  assert.match(home, /Kairo connects consented health, attention, schedule, and location signals/);
   assert.match(home, /GOOGLE DATA ACCESS \/ READ ONLY/);
   assert.match(home, /href="\/privacy"/);
   assert.match(privacy, /Google API Services User Data Policy/);
