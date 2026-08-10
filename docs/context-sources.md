@@ -65,16 +65,36 @@ on-demand sync. Vercel also calls the same route daily through a `CRON_SECRET`-s
 GET. Google sync tokens make subsequent runs incremental; an expired token causes a
 bounded 120-day full refresh.
 
+Kairo's Health dashboard provides **Connect Google Calendar**, **Sync now**, and
+**Disconnect** controls. Connect uses a signed, ten-minute anti-CSRF state and requests
+read-only Calendar access. The returned refresh token is encrypted with AES-256-GCM
+before it is stored in `google_calendar_connections`; neither status APIs nor the UI
+return it. Disconnect asks Google to revoke the token, removes the local connection and
+imported Calendar observations, then rebuilds the affected context days.
+
+Create a Google OAuth **Web application** client and register this exact authorized
+redirect URI:
+
+```text
+https://YOUR_KAIRO_DOMAIN/api/context/google-calendar/callback
+```
+
 Configure these values in Vercel and `.env.local`:
 
 ```text
+KAIRO_PUBLIC_URL=https://YOUR_KAIRO_DOMAIN
 GOOGLE_CALENDAR_CLIENT_ID=...
 GOOGLE_CALENDAR_CLIENT_SECRET=...
-GOOGLE_CALENDAR_REFRESH_TOKEN=...
+GOOGLE_CALENDAR_REDIRECT_URI=https://YOUR_KAIRO_DOMAIN/api/context/google-calendar/callback
+GOOGLE_CALENDAR_TOKEN_ENCRYPTION_KEY=...
 CRON_SECRET=...
 ```
 
-The refresh token must belong to the Kairo owner and have read-only Calendar scope.
+Generate the independent token-encryption key once with `openssl rand -base64 32` and
+keep the same value across deployments. If Google's OAuth consent screen is in Testing,
+add the Kairo owner's Google account as a test user. No manually generated refresh token
+is required.
+
 Calendar events contribute event duration, title, all-day status, event type,
 transparency, recurrence, attendee count, and the owner’s response status.
 
