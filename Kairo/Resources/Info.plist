@@ -30,6 +30,15 @@
 	<string>Kairo uses coarse visits to calculate routines and commute context without storing a continuous location trail.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Kairo uses a coarse location snapshot to attach local environmental context.</string>
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>com.satyasaibhushan.kairo.context-refresh</string>
+	</array>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>fetch</string>
+		<string>location</string>
+	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIRequiresFullScreen</key>

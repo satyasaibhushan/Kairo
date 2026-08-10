@@ -1,3 +1,4 @@
+import BackgroundTasks
 import CoreLocation
 import FamilyControls
 import Foundation
@@ -12,16 +13,34 @@ final class ContextStore: ObservableObject {
 
     private let queue: ProtectedContextQueue?
     private let uploadClient = ContextUploadClient()
-    private lazy var locationCollector = LocationVisitCollector { [weak self] observation in
-        guard let self else { return }
-        do {
-            try self.queue?.enqueue([observation])
-            self.queuedObservations = self.queue?.count ?? 0
-            Task { await self.uploadQueuedObservations() }
-        } catch {
-            self.statusMessage = error.localizedDescription
+    private lazy var locationCollector = LocationVisitCollector(
+        onObservation: { [weak self] observation in
+            guard let self else { return }
+            do {
+                try self.queue?.enqueue([observation])
+                self.queuedObservations = self.queue?.count ?? 0
+                Task { await self.uploadQueuedObservations() }
+            } catch {
+                self.statusMessage = error.localizedDescription
+            }
+        },
+        onAuthorizationChange: { [weak self] status in
+            guard let self else { return }
+            self.objectWillChange.send()
+            switch status {
+            case .authorizedAlways:
+                self.statusMessage = "Automatic coarse location collection is enabled."
+            case .authorizedWhenInUse:
+                self.statusMessage = "Location works while Kairo is open. Tap Enable again and choose Always for automatic visits."
+            case .denied, .restricted:
+                self.statusMessage = "Location access was not granted."
+            case .notDetermined:
+                break
+            @unknown default:
+                break
+            }
         }
-    }
+    )
 
     init() {
         queue = try? ProtectedContextQueue()
@@ -38,12 +57,18 @@ final class ContextStore: ObservableObject {
 
     var locationAuthorized: Bool {
         locationCollector.authorizationStatus == .authorizedAlways
-            || locationCollector.authorizationStatus == .authorizedWhenInUse
+    }
+
+    var locationAuthorizationLimited: Bool {
+        locationCollector.authorizationStatus == .authorizedWhenInUse
     }
 
     func prepare() async {
-        if locationAuthorized { locationCollector.start() }
+        if locationAuthorized || locationAuthorizationLimited {
+            locationCollector.start()
+        }
         await refresh()
+        ContextBackgroundRefreshScheduler.schedule()
     }
 
     func requestScreenTimeAuthorization() async {
@@ -73,7 +98,19 @@ final class ContextStore: ObservableObject {
     }
 
     func refresh() async {
-        guard !isRefreshing, let queue else { return }
+        _ = await performRefresh()
+    }
+
+    func performBackgroundRefresh() async -> Bool {
+        if locationAuthorized || locationAuthorizationLimited {
+            locationCollector.start()
+        }
+        return await performRefresh()
+    }
+
+    private func performRefresh() async -> Bool {
+        guard !isRefreshing else { return true }
+        guard let queue else { return false }
         isRefreshing = true
         defer { isRefreshing = false }
         var observations: [ContextObservation] = []
@@ -94,8 +131,10 @@ final class ContextStore: ObservableObject {
                 ? "No new context observations were available."
                 : "Collected \(observations.count) context observations."
             await uploadQueuedObservations()
+            return !Task.isCancelled
         } catch {
             statusMessage = error.localizedDescription
+            return false
         }
     }
 
@@ -112,5 +151,38 @@ final class ContextStore: ObservableObject {
             queuedObservations = queue.count
             statusMessage = error.localizedDescription
         }
+    }
+}
+
+@MainActor
+enum ContextBackgroundRefreshScheduler {
+    static let identifier = "com.satyasaibhushan.kairo.context-refresh"
+    static let earliestRefreshInterval: TimeInterval = 60 * 60
+
+    static func register(refresh: @escaping @MainActor () async -> Bool) {
+        BGTaskScheduler.shared.register(
+            forTaskWithIdentifier: identifier,
+            using: .main
+        ) { task in
+            guard let refreshTask = task as? BGAppRefreshTask else {
+                task.setTaskCompleted(success: false)
+                return
+            }
+            schedule()
+            let operation = Task { @MainActor in
+                let succeeded = await refresh()
+                refreshTask.setTaskCompleted(success: succeeded && !Task.isCancelled)
+            }
+            refreshTask.expirationHandler = {
+                operation.cancel()
+            }
+        }
+    }
+
+    static func schedule(now: Date = .now) {
+        BGTaskScheduler.shared.cancel(taskRequestWithIdentifier: identifier)
+        let request = BGAppRefreshTaskRequest(identifier: identifier)
+        request.earliestBeginDate = now.addingTimeInterval(earliestRefreshInterval)
+        try? BGTaskScheduler.shared.submit(request)
     }
 }

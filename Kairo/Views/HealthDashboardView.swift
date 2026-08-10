@@ -82,7 +82,9 @@ struct HealthDashboardView: View {
 
             sourceRow(
                 title: "Location visits",
-                detail: "Coarse ~1 km cells for routines, commute and weather",
+                detail: contextStore.locationAuthorizationLimited
+                    ? "Allow Always for automatic coarse visit updates"
+                    : "Automatic coarse ~1 km cells for routines and commute",
                 isEnabled: contextStore.locationAuthorized
             ) {
                 contextStore.requestLocationAuthorization()
@@ -90,7 +92,7 @@ struct HealthDashboardView: View {
 
             sourceRow(
                 title: "Apple Music",
-                detail: "Recently played songs, duration, artist and genre",
+                detail: "Recently played songs, refreshed automatically",
                 isEnabled: contextStore.musicAuthorized
             ) {
                 Task { await contextStore.requestMusicAuthorization() }

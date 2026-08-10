@@ -151,9 +151,14 @@ enum MusicContextCollector {
 final class LocationVisitCollector: NSObject, @preconcurrency CLLocationManagerDelegate {
     private let manager = CLLocationManager()
     private let onObservation: (ContextObservation) -> Void
+    private let onAuthorizationChange: (CLAuthorizationStatus) -> Void
 
-    init(onObservation: @escaping (ContextObservation) -> Void) {
+    init(
+        onObservation: @escaping (ContextObservation) -> Void,
+        onAuthorizationChange: @escaping (CLAuthorizationStatus) -> Void = { _ in }
+    ) {
         self.onObservation = onObservation
+        self.onAuthorizationChange = onAuthorizationChange
         super.init()
         manager.delegate = self
         manager.desiredAccuracy = kCLLocationAccuracyKilometer
@@ -168,10 +173,12 @@ final class LocationVisitCollector: NSObject, @preconcurrency CLLocationManagerD
     func start() {
         guard CLLocationManager.locationServicesEnabled() else { return }
         manager.startMonitoringVisits()
+        manager.startMonitoringSignificantLocationChanges()
         manager.requestLocation()
     }
 
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        onAuthorizationChange(manager.authorizationStatus)
         if manager.authorizationStatus == .authorizedAlways
             || manager.authorizationStatus == .authorizedWhenInUse {
             start()
