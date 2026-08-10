@@ -41,9 +41,9 @@ Versioned one-time data migrations run after the schema is current. `001_health_
    in a region near `sin1`. The integration supplies `DATABASE_URL`.
 3. Add these Production, Preview, and Development environment variables:
    `KAIRO_INGEST_TOKEN`, `KAIRO_OWNER_ID`, `KAIRO_OWNER_NAME`,
-   `KAIRO_DASHBOARD_PASSWORD`, `KAIRO_SESSION_SECRET`, `CRON_SECRET`,
-   `GOOGLE_CALENDAR_CLIENT_ID`, `GOOGLE_CALENDAR_CLIENT_SECRET`, and
-   `GOOGLE_CALENDAR_REFRESH_TOKEN`.
+   `KAIRO_DASHBOARD_PASSWORD`, `KAIRO_SESSION_SECRET`, `KAIRO_PUBLIC_URL`, `CRON_SECRET`,
+   `GOOGLE_CALENDAR_CLIENT_ID`, `GOOGLE_CALENDAR_CLIENT_SECRET`,
+   `GOOGLE_CALENDAR_REDIRECT_URI`, and `GOOGLE_CALENDAR_TOKEN_ENCRYPTION_KEY`.
 4. Pull the Vercel environment locally and initialize the database:
 
    ```bash
@@ -112,7 +112,12 @@ response; a fresh coarse location also triggers best-effort Open-Meteo enrichmen
 `POST /api/context/google-calendar/sync` requires the signed owner session. The same
 route accepts Vercel’s secured daily `GET`, whose bearer value comes from
 `CRON_SECRET`. Google Calendar uses incremental sync tokens and refreshes the last
-120 days only when no usable token exists.
+120 days only when no usable token exists. Configure a Google OAuth Web application
+with `/api/context/google-calendar/callback` as its authorized redirect URI, then set
+`GOOGLE_CALENDAR_CLIENT_ID`, `GOOGLE_CALENDAR_CLIENT_SECRET`,
+`GOOGLE_CALENDAR_REDIRECT_URI`, and `GOOGLE_CALENDAR_TOKEN_ENCRYPTION_KEY`. Generate
+the encryption key with `openssl rand -base64 32`. The authenticated Health dashboard
+then handles Connect, Sync now, and Disconnect without a manual refresh token.
 
 ## Validation
 

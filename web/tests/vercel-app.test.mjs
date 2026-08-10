@@ -50,6 +50,9 @@ test("contains the complete Vercel deployment handoff", async () => {
     "KAIRO_INGEST_TOKEN",
     "KAIRO_DASHBOARD_PASSWORD",
     "KAIRO_SESSION_SECRET",
+    "KAIRO_PUBLIC_URL",
+    "GOOGLE_CALENDAR_REDIRECT_URI",
+    "GOOGLE_CALENDAR_TOKEN_ENCRYPTION_KEY",
   ]) {
     assert.match(environment, new RegExp(name));
   }
@@ -133,13 +136,18 @@ test("keeps assistant health access bounded and owner authenticated", async () =
 });
 
 test("materializes acknowledged health changes and keeps context sources separate", async () => {
-  const [healthRoute, contextRoute, contextSchema, contextMaterializer, weather, calendar, config] = await Promise.all([
+  const [healthRoute, contextRoute, contextSchema, contextMaterializer, weather, calendar, oauth, calendarSync, calendarConnection, calendarCallback, dashboard, config] = await Promise.all([
     readFile(new URL("../app/api/health/changes/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/context/observations/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../db/003_context_sources.sql", import.meta.url), "utf8"),
     readFile(new URL("../lib/context-materialization.ts", import.meta.url), "utf8"),
     readFile(new URL("../lib/weather-enrichment.ts", import.meta.url), "utf8"),
     readFile(new URL("../lib/google-calendar-sync.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/google-calendar-oauth.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/context/google-calendar/sync/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/context/google-calendar/connection/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/context/google-calendar/callback/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/health/HealthLiveDashboard.tsx", import.meta.url), "utf8"),
     readFile(new URL("../vercel.json", import.meta.url), "utf8"),
   ]);
 
@@ -154,5 +162,15 @@ test("materializes acknowledged health changes and keeps context sources separat
   assert.match(weather, /api\.open-meteo\.com/);
   assert.match(calendar, /syncToken/);
   assert.match(calendar, /Google Calendar returned/);
+  assert.match(oauth, /AES-GCM/);
+  assert.match(oauth, /calendar\.readonly/);
+  assert.match(oauth, /expiresAt: Date\.now\(\) \+ stateLifetimeMilliseconds/);
+  assert.match(calendarSync, /decryptGoogleCalendarRefreshToken/);
+  assert.doesNotMatch(calendarSync, /GOOGLE_CALENDAR_REFRESH_TOKEN/);
+  assert.match(calendarConnection, /revokeGoogleCalendarRefreshToken/);
+  assert.match(calendarConnection, /DELETE FROM context_observations/);
+  assert.match(calendarCallback, /encryptGoogleCalendarRefreshToken/);
+  assert.match(dashboard, /CONNECT GOOGLE CALENDAR/);
+  assert.match(dashboard, /DISCONNECT/);
   assert.match(config, /api\/context\/google-calendar\/sync/);
 });

@@ -4,10 +4,19 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { emptyHealthSummary, type HealthSummary } from "./health-summary";
 
+type CalendarConnection = {
+  connected: boolean;
+  lastError: string | null;
+  lastSyncedAt: string | null;
+};
+
 export function HealthLiveDashboard() {
   const [summary, setSummary] = useState(emptyHealthSummary);
   const [ownerName, setOwnerName] = useState("OWNER");
   const [connection, setConnection] = useState<"loading" | "live" | "offline">("loading");
+  const [calendar, setCalendar] = useState<CalendarConnection | null>(null);
+  const [calendarBusy, setCalendarBusy] = useState(false);
+  const [calendarNotice, setCalendarNotice] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -31,6 +40,17 @@ export function HealthLiveDashboard() {
       }
     };
 
+    const refreshCalendar = async () => {
+      try {
+        const response = await fetch("/api/context/google-calendar/connection", { cache: "no-store" });
+        if (!response.ok) throw new Error("Calendar status failed");
+        const next = (await response.json()) as CalendarConnection;
+        if (active) setCalendar(next);
+      } catch {
+        if (active) setCalendar(null);
+      }
+    };
+
     const start = async () => {
       try {
         const response = await fetch("/api/auth/session", { cache: "no-store" });
@@ -43,7 +63,12 @@ export function HealthLiveDashboard() {
           return;
         }
         if (active) setOwnerName(session.owner?.displayName || "OWNER");
-        await refresh();
+        const calendarResult = new URLSearchParams(window.location.search).get("calendar");
+        if (calendarResult && active) {
+          setCalendarNotice(calendarResultMessage(calendarResult));
+          window.history.replaceState({}, "", "/health");
+        }
+        await Promise.all([refresh(), refreshCalendar()]);
         if (active) timer = window.setInterval(refresh, 10_000);
       } catch {
         if (active) setConnection("offline");
@@ -65,6 +90,38 @@ export function HealthLiveDashboard() {
   async function signOut() {
     await fetch("/api/auth/logout", { method: "POST" }).catch(() => undefined);
     window.location.assign("/");
+  }
+
+  async function syncCalendar() {
+    setCalendarBusy(true);
+    setCalendarNotice(null);
+    try {
+      const response = await fetch("/api/context/google-calendar/sync", { method: "POST" });
+      const result = (await response.json()) as { error?: string };
+      if (!response.ok) throw new Error(result.error || "Calendar sync failed");
+      setCalendarNotice("Google Calendar is up to date.");
+      await refreshCalendarConnection(setCalendar);
+    } catch (error) {
+      setCalendarNotice(error instanceof Error ? error.message : "Calendar sync failed.");
+    } finally {
+      setCalendarBusy(false);
+    }
+  }
+
+  async function disconnectCalendar() {
+    if (!window.confirm("Disconnect Google Calendar and remove its imported events from Kairo?")) return;
+    setCalendarBusy(true);
+    setCalendarNotice(null);
+    try {
+      const response = await fetch("/api/context/google-calendar/connection", { method: "DELETE" });
+      if (!response.ok) throw new Error("Calendar disconnect failed");
+      setCalendar({ connected: false, lastError: null, lastSyncedAt: null });
+      setCalendarNotice("Google Calendar was disconnected and its imported events were removed.");
+    } catch (error) {
+      setCalendarNotice(error instanceof Error ? error.message : "Calendar disconnect failed.");
+    } finally {
+      setCalendarBusy(false);
+    }
   }
 
   return (
@@ -102,6 +159,45 @@ export function HealthLiveDashboard() {
           <HealthStat value={summary.totalSamples.toLocaleString()} label="samples in ledger" />
           <HealthStat value={summary.trackedTypes.toLocaleString()} label="signal types observed" />
           <HealthStat value={summary.batchesReceived.toLocaleString()} label="batches acknowledged" />
+        </section>
+
+        <section className="health-panel health-calendar-panel">
+          <div className="health-panel-heading">
+            <div>
+              <span>CONTEXT / GOOGLE CALENDAR</span>
+              <h2>{calendar?.connected ? "Calendar connected" : "Add schedule context"}</h2>
+            </div>
+            <p>
+              Read-only access adds meeting load and schedule timing to Kairo&apos;s daily context.
+            </p>
+          </div>
+          <div className="health-calendar-connection">
+            <div>
+              <strong>{calendar?.connected ? "READ-ONLY SYNC ACTIVE" : "NOT CONNECTED"}</strong>
+              <p>
+                {calendar?.connected
+                  ? `Last synced ${formatDate(calendar.lastSyncedAt)}`
+                  : "Google will ask you to approve read-only Calendar access."}
+              </p>
+              {(calendarNotice || calendar?.lastError) && (
+                <small>{calendarNotice || calendar?.lastError}</small>
+              )}
+            </div>
+            <div className="health-calendar-actions">
+              {calendar?.connected ? (
+                <>
+                  <button type="button" disabled={calendarBusy} onClick={syncCalendar}>
+                    {calendarBusy ? "WORKING" : "SYNC NOW"}
+                  </button>
+                  <button className="secondary" type="button" disabled={calendarBusy} onClick={disconnectCalendar}>
+                    DISCONNECT
+                  </button>
+                </>
+              ) : (
+                <a href="/api/context/google-calendar/connect">CONNECT GOOGLE CALENDAR</a>
+              )}
+            </div>
+          </div>
         </section>
 
         <section className="health-panel health-volume-panel">
@@ -214,4 +310,22 @@ function shortDay(value: string): string {
   return new Intl.DateTimeFormat("en-IN", { day: "2-digit", month: "short" }).format(
     new Date(`${value}T00:00:00Z`),
   );
+}
+
+async function refreshCalendarConnection(
+  setCalendar: (connection: CalendarConnection) => void,
+): Promise<void> {
+  const response = await fetch("/api/context/google-calendar/connection", { cache: "no-store" });
+  if (!response.ok) return;
+  setCalendar((await response.json()) as CalendarConnection);
+}
+
+function calendarResultMessage(result: string): string {
+  switch (result) {
+    case "connected": return "Google Calendar connected and initial sync completed.";
+    case "denied": return "Google Calendar access was not approved.";
+    case "configuration_error": return "Google Calendar OAuth is not configured yet.";
+    case "invalid_state": return "The Google connection expired. Please try again.";
+    default: return "Google Calendar could not be connected. Please try again.";
+  }
 }
