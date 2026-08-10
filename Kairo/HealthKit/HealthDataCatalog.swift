@@ -17,6 +17,9 @@ enum HealthDataCatalog {
         var types = Set<HKObjectType>(sampleTypes.filter {
             !$0.requiresPerObjectAuthorization()
         })
+        if #available(iOS 26.0, *) {
+            types.remove(HKObjectType.medicationDoseEventType())
+        }
         types.formUnion(characteristicIdentifiers.compactMap(HKObjectType.characteristicType(forIdentifier:)))
         types.insert(HKObjectType.activitySummaryType())
         return types
