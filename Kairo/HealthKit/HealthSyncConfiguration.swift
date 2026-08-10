@@ -25,6 +25,16 @@ struct HealthSyncConfiguration: Codable, Equatable {
         self.ingestToken = ingestToken
         self.siteAccessToken = siteAccessToken
     }
+
+    var contextEndpoint: URL {
+        guard var components = URLComponents(url: endpoint, resolvingAgainstBaseURL: false) else {
+            return endpoint
+        }
+        components.path = "/api/context/observations"
+        components.query = nil
+        components.fragment = nil
+        return components.url ?? endpoint
+    }
 }
 
 enum HealthSyncConfigurationError: LocalizedError {

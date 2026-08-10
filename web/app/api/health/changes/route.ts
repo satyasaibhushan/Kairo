@@ -1,9 +1,11 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { getDatabase } from "../../../../lib/database";
+import { rebuildHealthFeatures } from "../../../../scripts/rebuild-health-features.mjs";
 import { parseHealthBatch } from "../../../health-contract";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
+export const maxDuration = 60;
 
 const maximumBodyBytes = 1_000_000;
 
@@ -51,6 +53,33 @@ export async function POST(request: Request) {
     }));
 
     const sql = getDatabase();
+    const timeZone = process.env.KAIRO_TIME_ZONE ?? "Asia/Kolkata";
+    const affectedRangeResult = await sql`WITH incoming AS (
+        SELECT * FROM jsonb_to_recordset(${JSON.stringify(records)}::jsonb) AS entry(
+          sample_id text,
+          start_date timestamptz,
+          end_date timestamptz
+        )
+      ), effective_times AS (
+        SELECT COALESCE(end_date, start_date) AS effective_at
+        FROM incoming
+        UNION ALL
+        SELECT COALESCE(existing.end_date, existing.start_date) AS effective_at
+        FROM health_changes existing
+        JOIN incoming USING (sample_id)
+        WHERE existing.owner_id = ${ownerId}
+      )
+      SELECT
+        MIN((effective_at AT TIME ZONE ${timeZone})::date)::text AS "minimumDate",
+        MAX((effective_at AT TIME ZONE ${timeZone})::date)::text AS "maximumDate"
+      FROM effective_times
+      WHERE effective_at IS NOT NULL`;
+    const affectedRangeRows = affectedRangeResult as unknown as Array<{
+      minimumDate: string | null;
+      maximumDate: string | null;
+    }>;
+    const affectedRange = affectedRangeRows[0];
+
     await sql`WITH inserted_batch AS (
         INSERT INTO health_ingest_batches
           (owner_id, device_id, batch_id, accepted_count, device_sent_at, received_at)
@@ -119,6 +148,24 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Batch identifier collision" }, { status: 409 });
     }
 
+    if (affectedRange?.minimumDate && affectedRange.maximumDate) {
+      const through = addUtcDays(affectedRange.maximumDate, 28);
+      after(async () => {
+        try {
+          await rebuildHealthFeatures({
+            sqlClient: sql,
+            ownerId,
+            timeZone,
+            from: affectedRange.minimumDate ?? undefined,
+            through,
+            chunkDays: 29,
+          });
+        } catch (error) {
+          console.error("Incremental health materialization failed", error);
+        }
+      });
+    }
+
     return NextResponse.json({
       batchId: batch.batchId,
       accepted,
@@ -128,6 +175,12 @@ export async function POST(request: Request) {
     const message = error instanceof Error ? error.message : "Invalid health batch";
     return NextResponse.json({ error: message }, { status: 400 });
   }
+}
+
+function addUtcDays(value: string, days: number): string {
+  const date = new Date(`${value}T00:00:00.000Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
 }
 
 async function isAuthorized(request: Request, expectedToken: string): Promise<boolean> {

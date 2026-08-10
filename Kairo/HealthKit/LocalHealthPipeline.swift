@@ -307,6 +307,15 @@ final class HealthIncrementalCollector {
             }
         }
 
+        if #available(iOS 26.0, *), sampleTypes.count == HealthDataCatalog.sampleTypes.count {
+            do {
+                try queue.enqueue(try await medicationInventoryChanges())
+                scanned += 1
+            } catch {
+                failures += 1
+            }
+        }
+
         return HealthCollectionStatus(
             queuedChanges: queue.count,
             typesScanned: scanned,
@@ -610,7 +619,19 @@ final class HealthIncrementalCollector {
         var categoryValue: Int?
         var metadata = normalizedMetadata(sample.metadata)
 
-        if let quantity = sample as? HKQuantitySample, let preferredUnit {
+        if #available(iOS 26.0, *), let dose = sample as? HKMedicationDoseEvent {
+            numericValue = dose.doseQuantity
+            unit = dose.unit.unitString
+            metadata["medicationConceptKey"] = medicationConceptKey(
+                dose.medicationConceptIdentifier
+            )
+            metadata["scheduleType"] = String(dose.scheduleType.rawValue)
+            metadata["logStatus"] = String(dose.logStatus.rawValue)
+            metadata["scheduledDoseQuantity"] = dose.scheduledDoseQuantity.map { String($0) }
+            metadata["scheduledDate"] = dose.scheduledDate.map {
+                ISO8601DateFormatter().string(from: $0)
+            }
+        } else if let quantity = sample as? HKQuantitySample, let preferredUnit {
             numericValue = quantity.quantity.doubleValue(for: preferredUnit)
             unit = preferredUnit.unitString
         } else if let category = sample as? HKCategorySample {
@@ -677,6 +698,68 @@ final class HealthIncrementalCollector {
             deviceManufacturer: device?.manufacturer,
             metadata: metadata
         )
+    }
+
+    @available(iOS 26.0, *)
+    private func medicationInventoryChanges() async throws -> [HealthChange] {
+        let medications = try await HKUserAnnotatedMedicationQueryDescriptor().result(for: store)
+        return medications.map { annotated in
+            let concept = annotated.medication
+            let conceptKey = medicationConceptKey(concept.identifier)
+            let sampleID = stableUUID(material: "medication:\(conceptKey)")
+            let codings = concept.relatedCodings
+                .map { "\($0.system)|\($0.version ?? "")|\($0.code)" }
+                .sorted()
+                .joined(separator: ",")
+            return HealthChange(
+                id: "upsert:\(sampleID.uuidString)",
+                operation: .upsert,
+                sampleID: sampleID,
+                typeIdentifier: HKObjectType.userAnnotatedMedicationType().identifier,
+                startDate: nil,
+                endDate: nil,
+                numericValue: nil,
+                unit: nil,
+                categoryValue: nil,
+                sourceName: "Apple Health Medications",
+                sourceBundleIdentifier: "com.apple.Health",
+                sourceVersion: nil,
+                deviceName: nil,
+                deviceModel: nil,
+                deviceManufacturer: "Apple",
+                metadata: [
+                    "medicationConceptKey": conceptKey,
+                    "displayText": concept.displayText,
+                    "nickname": annotated.nickname ?? "",
+                    "generalForm": concept.generalForm.rawValue,
+                    "isArchived": String(annotated.isArchived),
+                    "hasSchedule": String(annotated.hasSchedule),
+                    "clinicalCodings": codings,
+                ]
+            )
+        }
+    }
+
+    @available(iOS 26.0, *)
+    private func medicationConceptKey(_ identifier: HKHealthConceptIdentifier) -> String {
+        let data = (try? NSKeyedArchiver.archivedData(
+            withRootObject: identifier,
+            requiringSecureCoding: true
+        )) ?? Data(identifier.domain.rawValue.utf8)
+        return SHA256.hash(data: data)
+            .map { String(format: "%02x", $0) }
+            .joined()
+    }
+
+    private func stableUUID(material: String) -> UUID {
+        let bytes = Array(SHA256.hash(data: Data(material.utf8)).prefix(16))
+        let tuple: uuid_t = (
+            bytes[0], bytes[1], bytes[2], bytes[3],
+            bytes[4], bytes[5], bytes[6], bytes[7],
+            bytes[8], bytes[9], bytes[10], bytes[11],
+            bytes[12], bytes[13], bytes[14], bytes[15]
+        )
+        return UUID(uuid: tuple)
     }
 
     private func normalizedMetadata(_ metadata: [String: Any]?) -> [String: String] {

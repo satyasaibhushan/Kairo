@@ -28,6 +28,12 @@ The current app:
 - stores the endpoint credentials in the iPhone Keychain;
 - keeps collecting safely offline and resumes upload on the next HealthKit event or manual refresh;
 - imports pre-Kairo history in resumable 250-change pages without allowing the protected queue to grow unbounded.
+- imports iOS 26 medication dose events and the user-annotated medication catalog;
+- optionally captures Screen Time summaries, coarse location visits, and Apple Music recents;
+- enriches current coarse location with Open-Meteo weather and air quality;
+- derives travel, recurring-route commute, and routine-deviation features on the server;
+- incrementally synchronizes Google Calendar into the separate context ledger;
+- rebuilds affected health intelligence days automatically after acknowledged ingestion.
 
 ## Requirements
 
@@ -46,14 +52,16 @@ The current app:
 
 2. Open `Kairo.xcodeproj`.
 3. Select the `Kairo` target and choose your Apple Developer team under Signing & Capabilities.
-4. Confirm that HealthKit and Background Delivery appear under Signing & Capabilities.
+4. Confirm that HealthKit, Background Delivery, Family Controls, and App & Website
+   Activity appear under Signing & Capabilities. Apple may require approval for the
+   Family Controls distribution entitlement before an archive can be distributed.
 5. Select your connected iPhone and run the app.
 6. Tap **Choose health signals** and approve only the categories you want Kairo to read.
 7. Tap **Pair private ledger**, paste the private pairing code, then tap **Pair and upload**.
 
 HealthKit intentionally does not reveal whether an individual read permission was denied. Kairo therefore displays unavailable data as “No data” without claiming that permission was denied.
 
-The standard catalog currently declares 205 directly readable object types. On the installed SDK, 196 resolve to sample streams that support anchored incremental collection. The exact available count is computed at runtime because SDK and OS support differ. Characteristics and activity summaries use separate query APIs and remain visible through the curated snapshot until their dedicated collectors are added. Clinical records and iOS 26 medication objects use additional authorization systems and remain separate, explicit opt-ins. Dashboard cards stay curated even when broader collection is authorized.
+The standard catalog currently declares 205 directly readable object types. On the installed SDK, 196 resolve to sample streams that support anchored incremental collection. The exact available count is computed at runtime because SDK and OS support differ. Characteristics and activity summaries use separate query APIs and remain visible through the curated snapshot until their dedicated collectors are added. Clinical records remain outside Kairo. On iOS 26, medication dose events and the user-annotated medication catalog are included in the HealthKit authorization request; older systems simply omit those unavailable types. Dashboard cards stay curated even when broader collection is authorized.
 
 The first collection seeds the preceding 24 hours, then opaque HealthKit anchors fetch only additions, updates, and deletions. A separate historical cursor walks records before that live cutoff. It protects one 250-change page locally, waits for server acknowledgement, and then continues, so a large archive cannot fill the phone. The queue has a 25,000-change safety limit and refuses new changes instead of silently dropping data. A failed or interrupted request leaves the complete batch on the phone for retry, while historical stream progress resumes after the last protected page.
 
@@ -62,6 +70,16 @@ The first collection seeds the preceding 24 hours, then opaque HealthKit anchors
 Kairo is event-driven rather than cron-driven. Every collectible HealthKit sample stream gets a background observer, subject to iOS scheduling. Weight, sleep, workouts, mood, glucose, oxygen saturation, temperature, inhaler use, resting heart rate, and HRV request immediate delivery; the remaining streams request power-efficient hourly delivery. An observer reconciles only the changed stream before uploading. Opening the app or pulling to refresh performs a complete reconciliation and uploads immediately.
 
 The web ledger is private to its owner and exposes a live dashboard at `/health`. The dashboard refreshes every ten seconds while open. Health data is keyed by HealthKit sample UUID and device ID so repeated delivery is safe.
+
+Non-health context stays in a separate ledger. Screen Time requires iOS 26.4 and the
+App & Website Activity data-access authorization; Apple currently limits customer
+data-access approval to EU devices/accounts, while development provisioning can test
+in other regions. Location stores only coordinates
+rounded to two decimal places (roughly kilometre-scale cells), not a continuous GPS
+trail. Commute minutes appear only after the same weekday route has occurred on at
+least three distinct days; routine deviation needs three earlier matching weekdays.
+Apple Music supplies recently played items and their last-played timestamps, not a
+complete play-by-play listening export.
 
 All browser pages are generated as static assets. Authentication, HealthKit ingestion, and private summary reads use Vercel serverless routes; page navigation never waits for request-time SSR.
 
@@ -110,4 +128,11 @@ npm run features:rebuild
 npm run factors:train
 ```
 
-The next runtime step is an incremental post-ingest rebuild for affected personal days, followed by temporally validated factor training once Kairo has enough State of Mind labels. Medication and clinical-record sources remain separate explicit opt-ins because Apple gives them additional privacy and authorization semantics.
+Each acknowledged HealthKit upload now schedules a post-response rebuild for the
+affected personal days and their rolling-baseline horizon. The raw ledger remains the
+source of truth; this is materialization of data Kairo already received, not another
+iPhone data source. Temporally validated factor training remains intentionally separate
+until Kairo has enough State of Mind labels.
+
+Context setup, Google OAuth variables, and source limitations are documented in
+[`docs/context-sources.md`](docs/context-sources.md).

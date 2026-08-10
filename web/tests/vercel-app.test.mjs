@@ -126,6 +126,33 @@ test("keeps assistant health access bounded and owner authenticated", async () =
   assert.match(data, /Missing data means unknown, not zero/);
   assert.match(data, /kairo\.jarvis\.health-view\.v1/);
   assert.match(data, /notablePersonalDeviations/);
+  assert.match(data, /context_daily_profiles/);
+  assert.match(data, /context_current_observations/);
   assert.match(data, /LIMIT 12/);
   assert.match(data, /LIMIT 10/);
+});
+
+test("materializes acknowledged health changes and keeps context sources separate", async () => {
+  const [healthRoute, contextRoute, contextSchema, contextMaterializer, weather, calendar, config] = await Promise.all([
+    readFile(new URL("../app/api/health/changes/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/context/observations/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../db/003_context_sources.sql", import.meta.url), "utf8"),
+    readFile(new URL("../lib/context-materialization.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/weather-enrichment.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/google-calendar-sync.ts", import.meta.url), "utf8"),
+    readFile(new URL("../vercel.json", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(healthRoute, /after\(async \(\) =>/);
+  assert.match(healthRoute, /rebuildHealthFeatures/);
+  assert.match(contextRoute, /enrichCurrentWeather/);
+  assert.match(contextRoute, /materializeContextDates/);
+  assert.match(contextSchema, /CREATE TABLE IF NOT EXISTS context_observations/);
+  assert.match(contextSchema, /CREATE TABLE IF NOT EXISTS google_calendar_connections/);
+  assert.match(contextMaterializer, /location\.commute_minutes/);
+  assert.match(contextMaterializer, /routine_departure_deviation_minutes/);
+  assert.match(weather, /api\.open-meteo\.com/);
+  assert.match(calendar, /syncToken/);
+  assert.match(calendar, /Google Calendar returned/);
+  assert.match(config, /api\/context\/google-calendar\/sync/);
 });

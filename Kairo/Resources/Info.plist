@@ -24,6 +24,12 @@
 	<true/>
 	<key>NSHealthShareUsageDescription</key>
 	<string>Kairo reads the health signals you select to show your personal trends and discover which factors align with your mood.</string>
+	<key>NSAppleMusicUsageDescription</key>
+	<string>Kairo reads recently played music to add listening context to your private daily profile.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Kairo uses coarse visits to calculate routines and commute context without storing a continuous location trail.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Kairo uses a coarse location snapshot to attach local environmental context.</string>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIRequiresFullScreen</key>
