@@ -67,6 +67,25 @@ test("contains the complete Vercel deployment handoff", async () => {
   await access(root);
 });
 
+test("publishes an OAuth-verifiable Kairo homepage and privacy policy", async () => {
+  const [home, privacy, layout] = await Promise.all([
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/privacy/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(layout, /Kairo — Private Personal Intelligence/);
+  assert.match(home, /Kairo is a private personal intelligence system/);
+  assert.match(home, /GOOGLE DATA ACCESS \/ READ ONLY/);
+  assert.match(home, /href="\/privacy"/);
+  assert.match(privacy, /Google API Services User Data Policy/);
+  assert.match(privacy, /Kairo does not sell Google user data/);
+  assert.match(privacy, /AES-256-GCM/);
+  assert.match(privacy, /Disconnect/);
+  assert.doesNotMatch(privacy, /getOwner|requireOwner/);
+  await access(new URL("../app/privacy/page.tsx", import.meta.url));
+});
+
 test("defines the rebuildable health intelligence layer", async () => {
   const [migration, migrateScript, dataMigrations, buildScript, featureBuilder, factorTrainer, packageJson] = await Promise.all([
     readFile(new URL("../db/002_health_intelligence.sql", import.meta.url), "utf8"),

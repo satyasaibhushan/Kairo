@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import "./globals.css";
 
-const title = "Kairo / Life OS — The System That Notices";
+const title = "Kairo — Private Personal Intelligence";
 const description =
-  "A researched product vision for connecting Progress, Time, Kairo, health, attention, work and lived experience into a private personal intelligence system.";
+  "Kairo is a private personal intelligence system that connects health, attention, schedule and lived context into evidence-backed personal insights.";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://kairo.bhushan.fun"),
@@ -29,7 +29,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html data-scroll-behavior="smooth" lang="en">
       <body>{children}</body>
     </html>
   );

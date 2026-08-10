@@ -228,9 +228,9 @@ export default function Home() {
   return (
     <main>
       <header className="topbar">
-        <a className="brand" href="#top" aria-label="Kairo Life OS home">
+        <a className="brand" href="#top" aria-label="Kairo home">
           <span className="brand-mark">K</span>
-          <span>KAIRO / LIFE OS</span>
+          <span>KAIRO</span>
         </a>
         <nav aria-label="Primary navigation">
           <a href="#surfaces">Surfaces</a>
@@ -247,16 +247,16 @@ export default function Home() {
 
       <section className="hero shell" id="top">
         <div className="hero-copy">
-          <div className="eyebrow">A PRIVATE INTELLIGENCE LAYER FOR ONE LIFE</div>
+          <div className="eyebrow">KAIRO · PRIVATE PERSONAL INTELLIGENCE</div>
           <h1>
-            The system that
+            Kairo is the system that
             <br />
             <em>notices.</em>
           </h1>
           <p className="hero-lede">
-            Not a giant dashboard. Not an AI that watches everything. A quiet operating layer that
-            connects what you planned, where your time went, how your body felt, and what actually
-            changed.
+            Kairo is a private personal intelligence system that connects what you planned, where
+            your time went, how your body felt, and what actually changed. It turns consented health,
+            attention and schedule signals into evidence-backed daily context—not surveillance.
           </p>
           <div className="hero-actions">
             <a className="primary-button" href="#architecture">
@@ -640,6 +640,57 @@ export default function Home() {
         </div>
       </section>
 
+      <section className="calendar-trust-section" id="google-calendar-access">
+        <div className="shell calendar-trust-grid">
+          <div className="calendar-trust-intro">
+            <p className="section-index">GOOGLE DATA ACCESS / READ ONLY</p>
+            <h2>
+              Calendar context,
+              <br />
+              never calendar control.
+            </h2>
+            <p>
+              When you connect Google Calendar, Kairo reads a limited set of event details to
+              understand schedule timing and meeting load. It cannot create, edit or delete events.
+            </p>
+            <div className="calendar-trust-actions">
+              <a className="primary-button" href="/privacy">
+                Read the privacy policy <span>→</span>
+              </a>
+              <a className="text-button" href="/health">
+                Open private dashboard <span>↗</span>
+              </a>
+            </div>
+          </div>
+          <div className="calendar-trust-cards">
+            <article>
+              <span>01 / READS</span>
+              <h3>Only useful event context.</h3>
+              <p>
+                Event title, start and end time, all-day status, recurrence, transparency,
+                attendee count and your response status from your primary calendar.
+              </p>
+            </article>
+            <article>
+              <span>02 / USES</span>
+              <h3>Daily schedule summaries.</h3>
+              <p>
+                Kairo derives meeting minutes, schedule timing and routine context so you can
+                compare demanding days with sleep, activity and recovery.
+              </p>
+            </article>
+            <article>
+              <span>03 / PROTECTS</span>
+              <h3>Encrypted and owner-controlled.</h3>
+              <p>
+                OAuth credentials are encrypted. Google data is not sold, used for advertising or
+                shared publicly. Disconnect revokes access and removes imported events.
+              </p>
+            </article>
+          </div>
+        </div>
+      </section>
+
       <section className="section shell" id="roadmap">
         <div className="section-heading">
           <div>
@@ -775,9 +826,9 @@ export default function Home() {
           <div>
             <a className="brand footer-brand" href="#top">
               <span className="brand-mark">K</span>
-              <span>KAIRO / LIFE OS</span>
+              <span>KAIRO</span>
             </a>
-            <p>A researched product vision for a private personal intelligence system.</p>
+            <p>A private personal intelligence system for evidence-backed daily context.</p>
           </div>
           <div className="source-list">
             <span>PRIMARY SOURCES</span>
@@ -790,6 +841,7 @@ export default function Home() {
           <div className="footer-meta">
             <span>VISION 01</span>
             <span>31 JUL 2026</span>
+            <a href="/privacy">PRIVACY POLICY →</a>
             <a href="#top">BACK TO TOP ↑</a>
           </div>
         </div>
