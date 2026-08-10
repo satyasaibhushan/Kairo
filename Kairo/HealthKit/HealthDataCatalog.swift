@@ -14,7 +14,9 @@ enum HealthDataCatalog {
     }
 
     static var readTypes: Set<HKObjectType> {
-        var types = Set<HKObjectType>(sampleTypes)
+        var types = Set<HKObjectType>(sampleTypes.filter {
+            !$0.requiresPerObjectAuthorization()
+        })
         types.formUnion(characteristicIdentifiers.compactMap(HKObjectType.characteristicType(forIdentifier:)))
         types.insert(HKObjectType.activitySummaryType())
         return types

@@ -9,8 +9,9 @@ final class HealthMetricTests: XCTestCase {
         if #available(iOS 26.0, *) {
             XCTAssertGreaterThanOrEqual(HealthDataCatalog.retainedTypeCount, 172)
             XCTAssertLessThanOrEqual(HealthDataCatalog.retainedTypeCount, 173)
-            XCTAssertTrue(HealthDataCatalog.readTypes.contains(HKObjectType.medicationDoseEventType()))
-            XCTAssertTrue(HealthDataCatalog.readTypes.contains(HKObjectType.userAnnotatedMedicationType()))
+            XCTAssertTrue(HealthDataCatalog.sampleTypes.contains(HKObjectType.medicationDoseEventType()))
+            XCTAssertFalse(HealthDataCatalog.readTypes.contains(HKObjectType.medicationDoseEventType()))
+            XCTAssertFalse(HealthDataCatalog.readTypes.contains(HKObjectType.userAnnotatedMedicationType()))
         } else {
             XCTAssertGreaterThanOrEqual(HealthDataCatalog.retainedTypeCount, 171)
             XCTAssertLessThanOrEqual(HealthDataCatalog.retainedTypeCount, 172)
@@ -21,6 +22,9 @@ final class HealthMetricTests: XCTestCase {
                 + HealthDataCatalog.summarizedQuantityTypes.count
         )
         XCTAssertLessThan(HealthDataCatalog.retainedTypeCount, 197)
+        XCTAssertFalse(HealthDataCatalog.readTypes.contains(where: {
+            $0.requiresPerObjectAuthorization()
+        }))
 
         let weight = try XCTUnwrap(HKObjectType.quantityType(forIdentifier: .bodyMass))
         let heartRate = try XCTUnwrap(HKObjectType.quantityType(forIdentifier: .heartRate))

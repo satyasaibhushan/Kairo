@@ -74,6 +74,12 @@ final class HealthStore: ObservableObject {
 
         do {
             try await store.requestAuthorization(toShare: [], read: HealthDataCatalog.readTypes)
+            if #available(iOS 26.0, *) {
+                try await store.requestPerObjectReadAuthorization(
+                    for: HKObjectType.userAnnotatedMedicationType(),
+                    predicate: nil
+                )
+            }
             authorizationState = .requested
             startObservers()
             await refresh()
