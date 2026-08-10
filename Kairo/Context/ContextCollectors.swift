@@ -118,9 +118,9 @@ enum ScreenTimeCollector {
 }
 
 enum MusicContextCollector {
-    static func collect(limit: Int = 50) async throws -> [ContextObservation] {
+    static func collect(limit: Int = 30) async throws -> [ContextObservation] {
         var request = MusicRecentlyPlayedRequest<Song>()
-        request.limit = limit
+        request.limit = requestLimit(limit)
         let response = try await request.response()
         return response.items.compactMap { song in
             guard let playedAt = song.lastPlayedDate else { return nil }
@@ -144,6 +144,10 @@ enum MusicContextCollector {
                 ]
             )
         }
+    }
+
+    static func requestLimit(_ requested: Int) -> Int {
+        min(max(requested, 1), 30)
     }
 }
 

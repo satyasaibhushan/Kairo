@@ -169,6 +169,11 @@ final class ContextStore: ObservableObject {
 }
 
 private func contextErrorDetails(_ error: Error) -> String {
+    if let musicError = error as? MusicDataRequest.Error {
+        return "Apple Music HTTP \(musicError.status), code \(musicError.code): "
+            + "\(musicError.title) — \(musicError.detailText)"
+    }
+
     var messages: [String] = []
     var pending = [error as NSError]
     var seen: Set<String> = []

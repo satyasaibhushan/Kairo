@@ -41,6 +41,12 @@ final class HealthMetricTests: XCTestCase {
         }
     }
 
+    func testAppleMusicRequestLimitStaysWithinAPIMaximum() {
+        XCTAssertEqual(MusicContextCollector.requestLimit(50), 30)
+        XCTAssertEqual(MusicContextCollector.requestLimit(20), 20)
+        XCTAssertEqual(MusicContextCollector.requestLimit(0), 1)
+    }
+
     func testUnavailableReadingPreservesMetricIdentity() {
         let reading = HealthReading.unavailable(.sleep)
 
