@@ -119,6 +119,8 @@ The Vercel project must use `web` as its Root Directory. Complete Neon, environm
 The web app only speaks the Neon HTTP protocol, so the local demo runs plain Postgres behind the open-source
 Neon-compatible proxy and points the driver at it with `KAIRO_DATABASE_HTTP_ENDPOINT` (honoured by
 `web/lib/database.ts`; the plain Node scripts get the same setting through `--import ./scripts/demo/neon-local.mjs`).
+Only a loopback URL is accepted, and never on Vercel: anything else fails closed rather than sending queries, and the
+`DATABASE_URL` credentials with them, to another host (`web/scripts/demo/local-database-endpoint.mjs`).
 Seeding goes through `POST /api/health/changes` with the ingest token, exactly as the phone does, so the acknowledged
 batches also rebuild the derived daily features. All data is fictional.
 

@@ -4,6 +4,8 @@
 // in front of plain Postgres, exactly as lib/database.ts does for the app.
 import { neonConfig } from "@neondatabase/serverless";
 
-const endpoint = process.env.KAIRO_DATABASE_HTTP_ENDPOINT;
+import { localDatabaseEndpoint } from "./local-database-endpoint.mjs";
+
+const endpoint = localDatabaseEndpoint();
 if (!endpoint) throw new Error("Set KAIRO_DATABASE_HTTP_ENDPOINT before preloading scripts/demo/neon-local.mjs");
 neonConfig.fetchEndpoint = endpoint;
