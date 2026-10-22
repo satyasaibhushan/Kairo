@@ -598,6 +598,19 @@ button {
   background: var(--paper);
 }
 
+.demo-frame {
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--ink);
+}
+
+.demo-frame video {
+  display: block;
+  width: 100%;
+}
+
 .section-heading {
   display: grid;
   grid-template-columns: 1fr 420px;

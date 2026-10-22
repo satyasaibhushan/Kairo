@@ -2,6 +2,25 @@
 
 Kairo is a private life assistant that turns personal signals into useful context. This single repository contains both the native iPhone Health Bridge and the Vercel web platform that receives, stores, and explains its signals.
 
+## Demo
+
+![Kairo: the public page, the owner sign-in, and the live Health Ledger with a fortnight of fictional HealthKit samples](docs/demo/demo.gif)
+
+The recording is the real web app (production build) with a local Postgres behind a Neon-compatible HTTP proxy,
+seeded through the same ingest endpoint the iPhone bridge uses (`web/scripts/demo/`, see
+[Local web demo](#local-web-demo)). Still: [docs/demo/poster.png](docs/demo/poster.png). Video:
+[demo.webm](docs/demo/demo.webm), [demo.mp4](docs/demo/demo.mp4). The same recording plays on the public page.
+
+Live at https://kairo.bhushan.fun: the public page is open, `/health` is the owner's and asks for the dashboard password.
+The iPhone app is not in the recording; it needs a physical device (see [Run on an iPhone](#run-on-an-iphone)).
+
+## Stack
+
+- iPhone: SwiftUI, HealthKit anchored queries and background delivery, Keychain, iOS Data Protection (`Kairo/`)
+- Web: Next.js 16 App Router on Vercel, statically rendered pages, serverless API routes (`web/`)
+- Data: Neon Postgres through `@neondatabase/serverless`, numbered SQL migrations in `web/db/`
+- Context: Open-Meteo weather, Google Calendar OAuth, Apple Music, Screen Time and visits from the phone
+
 ## Repository layout
 
 - `Kairo/` — SwiftUI iPhone app and HealthKit bridge
@@ -94,6 +113,57 @@ npm run dev
 ```
 
 The Vercel project must use `web` as its Root Directory. Complete Neon, environment-variable, domain, and pairing instructions are in [`web/README.md`](web/README.md).
+
+## Local web demo
+
+The web app only speaks the Neon HTTP protocol, so the local demo runs plain Postgres behind the open-source
+Neon-compatible proxy and points the driver at it with `KAIRO_DATABASE_HTTP_ENDPOINT` (honoured by
+`web/lib/database.ts`; the plain Node scripts get the same setting through `--import ./scripts/demo/neon-local.mjs`).
+Seeding goes through `POST /api/health/changes` with the ingest token, exactly as the phone does, so the acknowledged
+batches also rebuild the derived daily features. All data is fictional.
+
+```sh
+docker network create kairo-demo
+docker run -d --name kairo-demo-pg --network kairo-demo -p 127.0.0.1:5432:5432 \
+  -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=kairo_demo postgres:16-alpine
+docker run -d --name kairo-demo-neon --network kairo-demo -p 127.0.0.1:4444:4444 \
+  -e PG_CONNECTION_STRING=postgres://postgres:postgres@kairo-demo-pg:5432/kairo_demo \
+  ghcr.io/timowilhelm/local-neon-http-proxy:main
+
+cd web
+npm install
+cat > .env.local <<'ENV'
+DATABASE_URL=postgres://postgres:postgres@db.localtest.me:5432/kairo_demo
+KAIRO_DATABASE_HTTP_ENDPOINT=http://127.0.0.1:4444/sql
+KAIRO_INGEST_TOKEN=<any 32+ characters>
+KAIRO_OWNER_ID=primary
+KAIRO_OWNER_NAME=Maya
+KAIRO_TIME_ZONE=Asia/Kolkata
+KAIRO_PUBLIC_URL=http://localhost:3100
+KAIRO_DASHBOARD_PASSWORD=<8+ characters>
+KAIRO_SESSION_SECRET=<any 32+ characters>
+CRON_SECRET=<any 16+ characters>
+ENV
+set -a; . ./.env.local; set +a
+node --import ./scripts/demo/neon-local.mjs scripts/migrate.mjs
+npm run build && npx next start --port 3100        # or npm run dev -- --port 3100
+node scripts/demo/seed.mjs                          # 14 days of fictional samples through the ingest API
+PLAYWRIGHT_MODULE=/path/to/node_modules/playwright/index.js node scripts/demo/capture.mjs
+```
+
+`capture.mjs` visits the public page, signs in with the dashboard password, scrolls the live ledger, and writes
+`docs/demo/poster.png` and `demo.webm`, plus `demo.mp4` and `demo.gif` when `ffmpeg` is on `PATH`. `seed.mjs` uses
+stable batch ids, so rerunning it is a no-op for the ledger. Playwright is not a project dependency.
+
+## Status and limitations
+
+- The web platform is deployed at https://kairo.bhushan.fun on Vercel with Neon; the public page describes the
+  vision, and the owner-only ledger, intelligence APIs, and context sources are live behind the dashboard session.
+- The iPhone bridge requires Xcode 26, a paid developer team, and a physical device for background delivery; it is
+  not part of the recorded demo.
+- The health intelligence layer (daily profiles, baselines, factors) is exposed as owner-authenticated JSON APIs, not
+  as dashboard pages yet; the dashboard shows the raw ledger.
+- Screen Time capture depends on Apple's regional data-access approval, as noted above.
 
 ## Validate
 

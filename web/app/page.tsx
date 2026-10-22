@@ -343,6 +343,32 @@ export default function Home() {
         </div>
       </section>
 
+      <section className="section shell" id="ledger">
+        <div className="section-heading">
+          <div>
+            <p className="section-index">00 / HEALTH LEDGER</p>
+            <h2>The receiving end, running.</h2>
+          </div>
+          <p>
+            The owner-only <a href="/health">Health Ledger</a> as it looks once the iPhone bridge has
+            delivered a fortnight of samples. Recorded from this web app with fictional seeded data.
+          </p>
+        </div>
+        <figure className="demo-frame">
+          <video
+            autoPlay
+            loop
+            muted
+            playsInline
+            poster="/demo/poster.png"
+            aria-label="Kairo demo: the public page, the owner sign-in, and the live Health Ledger with its daily volume chart and latest HealthKit records"
+          >
+            <source src="/demo/demo.webm" type="video/webm" />
+            <source src="/demo/demo.mp4" type="video/mp4" />
+          </video>
+        </figure>
+      </section>
+
       <section className="section shell" id="surfaces">
         <div className="section-heading">
           <div>
