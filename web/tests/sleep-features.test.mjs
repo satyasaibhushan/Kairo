@@ -16,6 +16,7 @@ test("sleep episodes keep pre-midnight stages on the wake day and union overlapp
       [String(id), start + "+05:30", end + "+05:30", category, source]);
     };
     await sample("2026-10-29T23:00", "2026-10-29T23:30");
+    await sample("2026-10-29T23:00", "2026-10-29T23:30"); // Exact duplicate, with a distinct sample ID.
     await sample("2026-10-29T23:30", "2026-10-30T03:00");
     await sample("2026-10-30T00:00", "2026-10-30T01:00"); // Nested duplicate must not split an episode.
     await sample("2026-10-30T02:30", "2026-10-30T06:00");

@@ -326,6 +326,7 @@ export async function rebuildSleepFeatures(parameters, sqlClient = sql) {
     `WITH sleep_samples AS (
        SELECT
          owner_id,
+         sample_id,
          COALESCE(source_bundle_identifier, source_name, 'unknown') AS source_key,
          source_name,
          source_bundle_identifier,
@@ -345,14 +346,14 @@ export async function rebuildSleepFeatures(parameters, sqlClient = sql) {
          AND start_date < ($4::date + 3)::timestamp AT TIME ZONE $2
      ), ordered AS (
        SELECT *, MAX(end_date) OVER (
-         PARTITION BY owner_id, source_key ORDER BY start_date, end_date
+         PARTITION BY owner_id, source_key ORDER BY start_date, end_date, sample_id
          ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING
        ) AS previous_end
        FROM sleep_samples
      ), episodes AS (
        SELECT *, SUM(CASE WHEN previous_end IS NULL
          OR start_date > previous_end + INTERVAL '90 minutes' THEN 1 ELSE 0 END) OVER (
-           PARTITION BY owner_id, source_key ORDER BY start_date, end_date
+           PARTITION BY owner_id, source_key ORDER BY start_date, end_date, sample_id
            ROWS UNBOUNDED PRECEDING
          ) AS episode_id
        FROM ordered
