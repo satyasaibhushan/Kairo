@@ -15,10 +15,17 @@ export async function materializeContextDates(
     WHERE owner_id = ${ownerId} AND feature_version = ${featureVersion}
       AND feature_date BETWEEN ${from}::date AND ${through}::date`;
 
-  await sql`WITH base AS (
+  await sql`WITH dated AS (
+      SELECT *,
+        CASE WHEN source_system = 'apple_screen_time'
+          THEN observed_start
+          ELSE COALESCE(observed_end, observed_start)
+        END AS reporting_at
+      FROM context_current_observations
+    ), base AS (
       SELECT
         owner_id,
-        (COALESCE(observed_end, observed_start) AT TIME ZONE ${timeZone})::date AS feature_date,
+        (reporting_at AT TIME ZONE ${timeZone})::date AS feature_date,
         metric_key,
         source_system,
         numeric_value,
@@ -26,11 +33,11 @@ export async function materializeContextDates(
         text_value,
         COALESCE(metadata_json->>'aggregation', 'latest') AS aggregation,
         COALESCE(observed_end, observed_start) AS effective_at
-      FROM context_current_observations
+      FROM dated
       WHERE owner_id = ${ownerId}
         AND operation = 'upsert'
         AND observed_start IS NOT NULL
-        AND (COALESCE(observed_end, observed_start) AT TIME ZONE ${timeZone})::date
+        AND (reporting_at AT TIME ZONE ${timeZone})::date
           BETWEEN ${from}::date AND ${through}::date
     ), grouped AS (
       SELECT

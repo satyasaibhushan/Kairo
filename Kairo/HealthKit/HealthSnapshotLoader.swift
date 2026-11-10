@@ -114,11 +114,11 @@ struct HealthSnapshotLoader {
             return .unavailable(.sleep)
         }
 
-        let start = Calendar.current.date(byAdding: .hour, value: -24, to: now) ?? now
+        let start = Calendar.current.date(byAdding: .hour, value: -72, to: now) ?? now
         let predicate = HKQuery.predicateForSamples(
             withStart: start,
             end: now,
-            options: [.strictStartDate]
+            options: []
         )
         let samples = try await samples(
             type: type,
@@ -127,29 +127,65 @@ struct HealthSnapshotLoader {
             sortDescriptors: nil
         )
 
+        guard let episode = Self.latestSleepEpisode(
+            from: samples.compactMap { $0 as? HKCategorySample }
+        ) else {
+            return .unavailable(.sleep)
+        }
+
+        return HealthReading(
+            metric: .sleep,
+            value: (episode.duration / 3_600).formatted(.number.precision(.fractionLength(1))),
+            unit: "hours",
+            measuredAt: episode.wakeDate
+        )
+    }
+
+    static func latestSleepEpisode(
+        from samples: [HKCategorySample]
+    ) -> (duration: TimeInterval, wakeDate: Date)? {
         let asleepValues: Set<Int> = [
             HKCategoryValueSleepAnalysis.asleepUnspecified.rawValue,
             HKCategoryValueSleepAnalysis.asleepCore.rawValue,
             HKCategoryValueSleepAnalysis.asleepDeep.rawValue,
             HKCategoryValueSleepAnalysis.asleepREM.rawValue,
         ]
-        let asleep = samples
-            .compactMap { $0 as? HKCategorySample }
-            .filter { asleepValues.contains($0.value) }
-
-        guard !asleep.isEmpty else {
-            return .unavailable(.sleep)
+        let ordered = samples.filter {
+            (0...5).contains($0.value) && $0.endDate > $0.startDate
+        }.sorted {
+            $0.startDate == $1.startDate ? $0.endDate < $1.endDate : $0.startDate < $1.startDate
+        }
+        var episodes: [[HKCategorySample]] = []
+        var episodeEnd: Date?
+        for sample in ordered {
+            // Match the web episode rule: short wake gaps belong to the same sleep episode.
+            if let end = episodeEnd, sample.startDate.timeIntervalSince(end) <= 90 * 60 {
+                episodes[episodes.count - 1].append(sample)
+                episodeEnd = max(end, sample.endDate)
+            } else {
+                episodes.append([sample])
+                episodeEnd = sample.endDate
+            }
         }
 
-        let duration = asleep.reduce(0) { $0 + $1.endDate.timeIntervalSince($1.startDate) }
-        let hours = duration / 3_600
-
-        return HealthReading(
-            metric: .sleep,
-            value: hours.formatted(.number.precision(.fractionLength(1))),
-            unit: "hours",
-            measuredAt: asleep.map(\.endDate).max()
-        )
+        return episodes.compactMap { episode -> (duration: TimeInterval, wakeDate: Date)? in
+            let asleep = episode.filter { asleepValues.contains($0.value) }
+            guard let first = asleep.first else { return nil }
+            var start = first.startDate
+            var end = first.endDate
+            var duration: TimeInterval = 0
+            for sample in asleep.dropFirst() {
+                if sample.startDate <= end {
+                    end = max(end, sample.endDate)
+                } else {
+                    duration += end.timeIntervalSince(start)
+                    start = sample.startDate
+                    end = sample.endDate
+                }
+            }
+            duration += end.timeIntervalSince(start)
+            return (duration, end)
+        }.max { $0.wakeDate < $1.wakeDate }
     }
 
     private func activityReadings(now: Date) async throws -> (

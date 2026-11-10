@@ -321,19 +321,18 @@ async function rebuildNumericFeatures(parameters) {
   );
 }
 
-async function rebuildSleepFeatures(parameters) {
-  await sql.query(
+export async function rebuildSleepFeatures(parameters, sqlClient = sql) {
+  await sqlClient.query(
     `WITH sleep_samples AS (
        SELECT
          owner_id,
-         (end_date AT TIME ZONE $2)::date AS feature_date,
+         sample_id,
          COALESCE(source_bundle_identifier, source_name, 'unknown') AS source_key,
          source_name,
          source_bundle_identifier,
          category_value,
          start_date,
-         end_date,
-         EXTRACT(EPOCH FROM (end_date - start_date)) AS duration_seconds
+         end_date
        FROM health_current_observations
        WHERE owner_id = $1
          AND operation = 'upsert'
@@ -342,26 +341,55 @@ async function rebuildSleepFeatures(parameters) {
          AND start_date IS NOT NULL
          AND end_date > start_date
          AND end_date - start_date <= INTERVAL '24 hours'
-         AND (end_date AT TIME ZONE $2)::date BETWEEN $3::date AND $4::date
-     ), source_days AS (
+         -- Include neighboring stages before assigning the whole episode to its wake date.
+         AND end_date >= ($3::date - 2)::timestamp AT TIME ZONE $2
+         AND start_date < ($4::date + 3)::timestamp AT TIME ZONE $2
+     ), ordered AS (
+       SELECT *, MAX(end_date) OVER (
+         PARTITION BY owner_id, source_key ORDER BY start_date, end_date, sample_id
+         ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING
+       ) AS previous_end
+       FROM sleep_samples
+     ), episodes AS (
+       SELECT *, SUM(CASE WHEN previous_end IS NULL
+         OR start_date > previous_end + INTERVAL '90 minutes' THEN 1 ELSE 0 END) OVER (
+           PARTITION BY owner_id, source_key ORDER BY start_date, end_date, sample_id
+           ROWS UNBOUNDED PRECEDING
+         ) AS episode_id
+       FROM ordered
+     ), assigned AS (
+       SELECT *, (MAX(end_date) FILTER (WHERE category_value IN (1, 3, 4, 5)) OVER (
+         PARTITION BY owner_id, source_key, episode_id
+       ) AT TIME ZONE $2)::date AS feature_date
+       FROM episodes
+     ), source_ranges AS (
        SELECT
-         owner_id,
-         feature_date,
-         source_key,
+         owner_id, feature_date, source_key,
          MAX(source_name) AS source_name,
          MAX(source_bundle_identifier) AS source_bundle_identifier,
          COUNT(*)::int AS sample_count,
-         SUM(duration_seconds) FILTER (WHERE category_value IN (1, 3, 4, 5)) AS asleep_seconds,
-         SUM(duration_seconds) FILTER (WHERE category_value IN (3, 4, 5)) AS staged_seconds,
-         SUM(duration_seconds) FILTER (WHERE category_value = 0) AS in_bed_seconds,
-         SUM(duration_seconds) FILTER (WHERE category_value = 2) AS awake_seconds,
-         SUM(duration_seconds) FILTER (WHERE category_value = 3) AS core_seconds,
-         SUM(duration_seconds) FILTER (WHERE category_value = 4) AS deep_seconds,
-         SUM(duration_seconds) FILTER (WHERE category_value = 5) AS rem_seconds,
+         range_agg(tstzrange(start_date, end_date, '[)')) FILTER (WHERE category_value IN (1, 3, 4, 5)) AS asleep_ranges,
+         range_agg(tstzrange(start_date, end_date, '[)')) FILTER (WHERE category_value IN (3, 4, 5)) AS staged_ranges,
+         range_agg(tstzrange(start_date, end_date, '[)')) FILTER (WHERE category_value = 0) AS in_bed_ranges,
+         range_agg(tstzrange(start_date, end_date, '[)')) FILTER (WHERE category_value = 2) AS awake_ranges,
+         range_agg(tstzrange(start_date, end_date, '[)')) FILTER (WHERE category_value = 3) AS core_ranges,
+         range_agg(tstzrange(start_date, end_date, '[)')) FILTER (WHERE category_value = 4) AS deep_ranges,
+         range_agg(tstzrange(start_date, end_date, '[)')) FILTER (WHERE category_value = 5) AS rem_ranges,
          MIN(start_date) FILTER (WHERE category_value IN (1, 3, 4, 5)) AS sleep_start,
          MAX(end_date) FILTER (WHERE category_value IN (1, 3, 4, 5)) AS sleep_end
-       FROM sleep_samples
+       FROM assigned
+       WHERE feature_date BETWEEN $3::date AND $4::date
        GROUP BY owner_id, feature_date, source_key
+     ), source_days AS (
+       SELECT *,
+         (SELECT SUM(EXTRACT(EPOCH FROM (upper(r) - lower(r)))) FROM unnest(asleep_ranges) r) AS asleep_seconds,
+         (SELECT SUM(EXTRACT(EPOCH FROM (upper(r) - lower(r)))) FROM unnest(staged_ranges) r) AS staged_seconds,
+         (SELECT SUM(EXTRACT(EPOCH FROM (upper(r) - lower(r)))) FROM unnest(in_bed_ranges) r) AS in_bed_seconds,
+         (SELECT SUM(EXTRACT(EPOCH FROM (upper(r) - lower(r)))) FROM unnest(awake_ranges) r) AS awake_seconds,
+         (SELECT SUM(EXTRACT(EPOCH FROM (upper(r) - lower(r)))) FROM unnest(core_ranges) r) AS core_seconds,
+         (SELECT SUM(EXTRACT(EPOCH FROM (upper(r) - lower(r)))) FROM unnest(deep_ranges) r) AS deep_seconds,
+         (SELECT SUM(EXTRACT(EPOCH FROM (upper(r) - lower(r)))) FROM unnest(rem_ranges) r) AS rem_seconds
+       FROM source_ranges
      ), ranked AS (
        SELECT *,
          ROW_NUMBER() OVER (

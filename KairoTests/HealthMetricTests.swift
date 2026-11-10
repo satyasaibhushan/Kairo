@@ -3,6 +3,40 @@ import XCTest
 @testable import Kairo
 
 final class HealthMetricTests: XCTestCase {
+    private func sleepSample(_ start: String, _ end: String, value: Int = 3) -> HKCategorySample {
+        let formatter = ISO8601DateFormatter()
+        return HKCategorySample(
+            type: HKObjectType.categoryType(forIdentifier: .sleepAnalysis)!,
+            value: value,
+            start: formatter.date(from: start)!,
+            end: formatter.date(from: end)!
+        )
+    }
+
+    func testSleepEpisodeUnionsDuplicatesAndKeepsShortWakeGaps() throws {
+        let samples = [
+            sleepSample("2026-10-29T23:00:00Z", "2026-10-30T03:00:00Z"),
+            sleepSample("2026-10-30T00:00:00Z", "2026-10-30T01:00:00Z"),
+            sleepSample("2026-10-30T02:30:00Z", "2026-10-30T07:00:00Z", value: 5),
+            sleepSample("2026-10-29T23:00:00Z", "2026-10-30T07:00:00Z", value: 1),
+            sleepSample("2026-10-30T07:15:00Z", "2026-10-30T07:30:00Z", value: 5),
+        ]
+        let episode = try XCTUnwrap(HealthSnapshotLoader.latestSleepEpisode(from: samples.reversed()))
+        XCTAssertEqual(episode.duration, 8.25 * 3_600)
+        XCTAssertEqual(episode.wakeDate, samples.last?.endDate)
+    }
+
+    func testSleepSelectsLatestWakeEpisodeRatherThanAddingPreviousDays() throws {
+        let previous = sleepSample("2026-10-28T23:00:00Z", "2026-10-29T07:00:00Z")
+        let latest = sleepSample("2026-10-29T23:00:00Z", "2026-10-30T07:00:00Z")
+        let inBedOnly = sleepSample("2026-10-30T14:00:00Z", "2026-10-30T15:00:00Z", value: 0)
+        let episode = try XCTUnwrap(HealthSnapshotLoader.latestSleepEpisode(from: [latest, previous, inBedOnly]))
+        XCTAssertEqual(episode.duration, 8 * 3_600)
+        XCTAssertEqual(episode.wakeDate, latest.endDate)
+        XCTAssertNil(HealthSnapshotLoader.latestSleepEpisode(from: [inBedOnly]))
+        XCTAssertNil(HealthSnapshotLoader.latestSleepEpisode(from: []))
+    }
+
     func testHealthCatalogRetainsSignalWithoutRawDenseTelemetry() throws {
         XCTAssertEqual(HealthDataCatalog.declaredTypeCount, 205)
         XCTAssertGreaterThanOrEqual(HealthDataCatalog.availableTypeCount, 200)

@@ -22,3 +22,14 @@ export type HealthFeatureRebuildResult = {
 export function rebuildHealthFeatures(
   options: HealthFeatureRebuildOptions,
 ): Promise<HealthFeatureRebuildResult>;
+
+export function rebuildSleepFeatures(
+  parameters: {
+    ownerId: string;
+    timeZone: string;
+    minimumDate: string;
+    maximumDate: string;
+    featureVersion: string;
+  },
+  sqlClient?: HealthFeatureSqlClient,
+): Promise<void>;
